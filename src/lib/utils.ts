@@ -30,6 +30,10 @@ export function calculateDistanceMeters(lat1: number, lon1: number, lat2: number
   return Math.round(earthRadius * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
 }
 
+export function normalizeOpeningTimeText(value: string) {
+  return value.replace(/(\d{1,2})時(?:\s*(\d{1,2})分)?/g, (_match, hour: string, minute?: string) => `${hour}:${minute ?? "00"}`);
+}
+
 function normalizeOpeningHours(value: unknown): string[] {
   if (Array.isArray(value)) return value.filter((item): item is string => typeof item === "string");
   if (typeof value === "string") {
@@ -53,7 +57,7 @@ export function getCurrentOpenStatus(openingHours: unknown) {
 
   const parts = new Intl.DateTimeFormat("en-GB", { hour: "2-digit", minute: "2-digit", hourCycle: "h23", timeZone: "Asia/Tokyo" }).formatToParts(now);
   const minuteOfDay = Number(parts.find((part) => part.type === "hour")?.value ?? 0) * 60 + Number(parts.find((part) => part.type === "minute")?.value ?? 0);
-  const periods = [...today.matchAll(/(\d{1,2}):(\d{2})\s*[–〜-]\s*(\d{1,2}):(\d{2})/g)];
+  const periods = [...normalizeOpeningTimeText(today).matchAll(/(\d{1,2}):(\d{2})\s*[–〜-]\s*(\d{1,2}):(\d{2})/g)];
   if (!periods.length) return { label: "営業時間不明", open: false, known: false };
   const open = periods.some((match) => {
     const start = Number(match[1]) * 60 + Number(match[2]);
