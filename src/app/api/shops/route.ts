@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
 import { calculateDistanceMeters, getCurrentOpenStatus } from "@/lib/utils";
 import { matchesRamenTaxonomy } from "@/lib/ramen-genres";
+import { dedupeRamenShops } from "@/lib/shop-deduplication";
+import type { RamenShop } from "@/types/ramen";
 
 export async function GET(request: NextRequest) {
   if (!supabase) return NextResponse.json({ shops: [], total: 0, message: "Supabase is not configured." });
@@ -25,7 +27,7 @@ export async function GET(request: NextRequest) {
   const sort = sortValue === "newest" || sortValue === "reviews" || (sortValue === "distance" && hasLocation) ? sortValue : "rating";
   const limit = Math.min(Math.max(Number(params.get("limit")) || 60, 1), 100);
   const offset = Math.max(Number(params.get("offset")) || 0, 0);
-  let builder = supabase.from("ramen_shops").select("*", { count: "exact" });
+  let builder = supabase.from("ramen_shops").select("*");
   if (query) builder = builder.or(`name.ilike.%${query}%,address.ilike.%${query}%`);
   if (genre) builder = builder.contains("genres", [genre]);
   if (minRating !== null) builder = builder.gte("rating", minRating);
@@ -48,17 +50,13 @@ export async function GET(request: NextRequest) {
     : sort === "reviews"
       ? builder.order("user_ratings_total", { ascending: false, nullsFirst: false })
       : builder.order("rating", { ascending: false, nullsFirst: false });
-  if (openNow || soup || style || sort === "distance") {
-    const [firstPage, secondPage, thirdPage] = await Promise.all([builder.range(0, 999), builder.range(1000, 1999), builder.range(2000, 2999)]);
-    const error = firstPage.error ?? secondPage.error ?? thirdPage.error;
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-    const matchingShops = [...(firstPage.data ?? []), ...(secondPage.data ?? []), ...(thirdPage.data ?? [])].filter((shop) =>
-      (!openNow || getCurrentOpenStatus(shop.opening_hours).open) && matchesRamenTaxonomy(shop.name, soup, style),
-    );
-    if (sort === "distance") matchingShops.sort((a, b) => calculateDistanceMeters(latitude, longitude, a.latitude, a.longitude) - calculateDistanceMeters(latitude, longitude, b.latitude, b.longitude));
-    return NextResponse.json({ shops: matchingShops.slice(offset, offset + limit), total: matchingShops.length });
-  }
-  const { data, error, count } = await builder.range(offset, offset + limit - 1);
+  // Import results can contain different Place IDs for one physical storefront.
+  // Read the import cap and deduplicate before applying pagination so pages and totals stay stable.
+  const { data, error } = await builder.range(0, 2999);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  return NextResponse.json({ shops: data ?? [], total: count ?? 0 });
+  const matchingShops = dedupeRamenShops((data ?? []) as RamenShop[]).filter((shop) =>
+    (!openNow || getCurrentOpenStatus(shop.opening_hours).open) && matchesRamenTaxonomy(shop.name, soup, style),
+  );
+  if (sort === "distance") matchingShops.sort((a, b) => calculateDistanceMeters(latitude, longitude, a.latitude, a.longitude) - calculateDistanceMeters(latitude, longitude, b.latitude, b.longitude));
+  return NextResponse.json({ shops: matchingShops.slice(offset, offset + limit), total: matchingShops.length });
 }

@@ -2,6 +2,7 @@ import { SearchExperience } from "@/components/SearchExperience";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import type { RamenShop } from "@/types/ramen";
+import { dedupeRamenShops } from "@/lib/shop-deduplication";
 
 export const dynamic = "force-dynamic";
 
@@ -10,10 +11,10 @@ export default async function Home() {
   let total = 0;
   if (supabase) {
     const [{ data }, { count }] = await Promise.all([
-      supabase.from("ramen_shops").select("*").order("rating", { ascending: false, nullsFirst: false }).limit(12),
+      supabase.from("ramen_shops").select("*").order("rating", { ascending: false, nullsFirst: false }).limit(48),
       supabase.from("ramen_shops").select("id", { count: "exact", head: true }),
     ]);
-    shops = (data as RamenShop[] | null) ?? []; total = count ?? 0;
+    shops = dedupeRamenShops((data as RamenShop[] | null) ?? []).slice(0, 12); total = count ?? 0;
   }
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://ramen-db-tokyo-blush.vercel.app";
   const structuredData = {
