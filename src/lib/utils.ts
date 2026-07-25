@@ -54,6 +54,7 @@ export function getCurrentOpenStatus(openingHours: unknown) {
   const today = hours.find((entry) => entry.startsWith(weekday));
   if (!today) return { label: "営業時間不明", open: false, known: false };
   if (/休業|定休日|Closed/i.test(today)) return { label: "営業時間外", open: false, known: true };
+  if (/24\s*時間営業|24\s*hours?/i.test(today)) return { label: "営業中", open: true, known: true };
 
   const parts = new Intl.DateTimeFormat("en-GB", { hour: "2-digit", minute: "2-digit", hourCycle: "h23", timeZone: "Asia/Tokyo" }).formatToParts(now);
   const minuteOfDay = Number(parts.find((part) => part.type === "hour")?.value ?? 0) * 60 + Number(parts.find((part) => part.type === "minute")?.value ?? 0);
