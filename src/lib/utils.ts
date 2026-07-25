@@ -15,10 +15,8 @@ export function formatStatus(status: string | null) {
   return status === "OPERATIONAL" ? "営業登録あり" : status.replaceAll("_", " ");
 }
 
-const ramenStyles = ["二郎系", "家系", "つけ麺", "油そば", "まぜそば", "豚骨", "味噌", "塩", "醤油"];
-
 export function inferRamenStyle(name: string) {
-  return ramenStyles.find((style) => name.includes(style)) ?? "ラーメン";
+  return classifyRamen(name).style;
 }
 
 export function calculateDistanceMeters(lat1: number, lon1: number, lat2: number, lon2: number) {
@@ -79,3 +77,4 @@ export function getCurrentOpenStatus(openingHours: unknown) {
   });
   return { label: open ? "営業中" : "営業時間外", open, known: true };
 }
+import { classifyRamen } from "./ramen-genres";
