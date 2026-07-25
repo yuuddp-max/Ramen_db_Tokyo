@@ -10,7 +10,7 @@ export default async function Home() {
   let total = 0;
   if (supabase) {
     const [{ data }, { count }] = await Promise.all([
-      supabase.from("ramen_shops").select("*").order("rating", { ascending: false, nullsFirst: false }).limit(60),
+      supabase.from("ramen_shops").select("*").order("rating", { ascending: false, nullsFirst: false }).limit(12),
       supabase.from("ramen_shops").select("id", { count: "exact", head: true }),
     ]);
     shops = (data as RamenShop[] | null) ?? []; total = count ?? 0;
