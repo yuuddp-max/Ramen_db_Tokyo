@@ -7,7 +7,9 @@ export type RamenShop = {
   longitude: number;
   rating: number | null;
   user_ratings_total: number | null;
-  opening_hours: string[] | null;
+  // Older imports may contain a JSON object or a plain string. Normalize it
+  // before rendering rather than assuming every value is a text array.
+  opening_hours: unknown;
   phone_number: string | null;
   website: string | null;
   price_level: string | null;
