@@ -9,6 +9,7 @@ export async function GET(request: NextRequest) {
   const style = params.get("style")?.trim() ?? "";
   const sort = params.get("sort") === "newest" ? "newest" : "rating";
   const limit = Math.min(Math.max(Number(params.get("limit")) || 60, 1), 100);
+  const offset = Math.max(Number(params.get("offset")) || 0, 0);
   let builder = supabase.from("ramen_shops").select("*", { count: "exact" });
   if (query) builder = builder.or(`name.ilike.%${query}%,address.ilike.%${query}%`);
   if (genre) builder = builder.contains("genres", [genre]);
@@ -16,7 +17,7 @@ export async function GET(request: NextRequest) {
   builder = sort === "newest"
     ? builder.order("created_at", { ascending: false })
     : builder.order("rating", { ascending: false, nullsFirst: false });
-  const { data, error, count } = await builder.limit(limit);
+  const { data, error, count } = await builder.range(offset, offset + limit - 1);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ shops: data ?? [], total: count ?? 0 });
 }

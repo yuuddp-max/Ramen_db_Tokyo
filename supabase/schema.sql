@@ -16,6 +16,9 @@ create table if not exists public.ramen_shops (
   price_level text,
   business_status text,
   genres text[],
+  nearest_station text,
+  nearest_station_distance_m integer check (nearest_station_distance_m >= 0),
+  station_checked_at timestamptz,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
