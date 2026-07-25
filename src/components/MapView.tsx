@@ -24,14 +24,6 @@ export function MapView({ shops, selected, className = "" }: Props) {
       const map = new googleMaps.Map(mapElement.current, {
         center: focus ? { lat: focus.latitude, lng: focus.longitude } : { lat: 35.6762, lng: 139.6503 },
         zoom: selected ? 15 : 11,
-        styles: [
-          { elementType: "geometry", stylers: [{ color: "#1d1d1d" }] },
-          { elementType: "labels.text.fill", stylers: [{ color: "#d9c9b7" }] },
-          { elementType: "labels.text.stroke", stylers: [{ color: "#1d1d1d" }] },
-          { featureType: "poi", stylers: [{ visibility: "off" }] },
-          { featureType: "road", elementType: "geometry", stylers: [{ color: "#37302a" }] },
-          { featureType: "water", elementType: "geometry", stylers: [{ color: "#121212" }] },
-        ],
       });
       const infoWindow = new googleMaps.InfoWindow();
       const markers = shops.map((shop) => {

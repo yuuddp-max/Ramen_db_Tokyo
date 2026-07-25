@@ -11,6 +11,8 @@ type GooglePlace = {
   priceLevel?: string;
   businessStatus?: string;
   types?: string[];
+  googleMapsUri?: string;
+  photos?: { name?: string; authorAttributions?: { displayName?: string; uri?: string; photoUri?: string }[] }[];
 };
 
 type TextSearchResponse = { places?: GooglePlace[]; nextPageToken?: string };
@@ -29,6 +31,9 @@ export type ImportedShop = {
   price_level: string | null;
   business_status: string | null;
   genres: string[] | null;
+  google_maps_uri: string | null;
+  photo_name: string | null;
+  photo_attributions: { displayName?: string; uri?: string; photoUri?: string }[] | null;
 };
 
 export const TOKYO_SEARCH_QUERIES = [
@@ -59,6 +64,8 @@ const fieldMask = [
   "places.priceLevel",
   "places.businessStatus",
   "places.types",
+  "places.googleMapsUri",
+  "places.photos",
   "nextPageToken",
 ].join(",");
 
@@ -82,6 +89,9 @@ function toShop(place: GooglePlace): ImportedShop | null {
     price_level: place.priceLevel ?? null,
     business_status: place.businessStatus ?? null,
     genres: place.types ?? null,
+    google_maps_uri: place.googleMapsUri ?? null,
+    photo_name: place.photos?.[0]?.name ?? null,
+    photo_attributions: place.photos?.[0]?.authorAttributions ?? null,
   };
 }
 

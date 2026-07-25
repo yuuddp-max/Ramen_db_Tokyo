@@ -1,12 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
 import { getCurrentOpenStatus } from "@/lib/utils";
+import { matchesRamenTaxonomy } from "@/lib/ramen-genres";
 
 export async function GET(request: NextRequest) {
   if (!supabase) return NextResponse.json({ shops: [], total: 0, message: "Supabase is not configured." });
   const params = request.nextUrl.searchParams;
   const query = params.get("q")?.trim() ?? "";
   const genre = params.get("genre")?.trim() ?? "";
+  const soup = params.get("soup")?.trim() ?? "";
   const style = params.get("style")?.trim() ?? "";
   const minRatingValue = Number(params.get("minRating"));
   const minRating = [4, 4.5].includes(minRatingValue) ? minRatingValue : null;
@@ -21,7 +23,6 @@ export async function GET(request: NextRequest) {
   let builder = supabase.from("ramen_shops").select("*", { count: "exact" });
   if (query) builder = builder.or(`name.ilike.%${query}%,address.ilike.%${query}%`);
   if (genre) builder = builder.contains("genres", [genre]);
-  if (style) builder = builder.ilike("name", `%${style}%`);
   if (minRating !== null) builder = builder.gte("rating", minRating);
   if (price) {
     const priceLevels: Record<string, string[]> = {
@@ -42,12 +43,14 @@ export async function GET(request: NextRequest) {
     : sort === "reviews"
       ? builder.order("user_ratings_total", { ascending: false, nullsFirst: false })
       : builder.order("rating", { ascending: false, nullsFirst: false });
-  if (openNow) {
+  if (openNow || soup || style) {
     const [firstPage, secondPage] = await Promise.all([builder.range(0, 999), builder.range(1000, 1999)]);
     const error = firstPage.error ?? secondPage.error;
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-    const openShops = [...(firstPage.data ?? []), ...(secondPage.data ?? [])].filter((shop) => getCurrentOpenStatus(shop.opening_hours).open);
-    return NextResponse.json({ shops: openShops.slice(offset, offset + limit), total: openShops.length });
+    const matchingShops = [...(firstPage.data ?? []), ...(secondPage.data ?? [])].filter((shop) =>
+      (!openNow || getCurrentOpenStatus(shop.opening_hours).open) && matchesRamenTaxonomy(shop.name, soup, style),
+    );
+    return NextResponse.json({ shops: matchingShops.slice(offset, offset + limit), total: matchingShops.length });
   }
   const { data, error, count } = await builder.range(offset, offset + limit - 1);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });

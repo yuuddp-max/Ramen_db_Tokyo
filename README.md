@@ -9,6 +9,7 @@
 - `POST /api/import` による東京全域データの取り込み
 - `place_id` のユニーク制約と Supabase `upsert` による重複防止
 - ブラウザのローカルストレージによるお気に入り（認証導入後は `favorites` テーブルへ移行可能）
+- フェーズ2：ユーザー投稿の待ち時間、曜日・時間帯別の実績グラフ、天気・祝日・評価を加味した混雑予測
 
 ## ローカル起動
 
@@ -31,9 +32,22 @@ npm run dev
 NEXT_PUBLIC_SUPABASE_URL=https://xxxxx.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 SUPABASE_SERVICE_ROLE_KEY=...
+NEXT_PUBLIC_SITE_URL=https://your-domain.vercel.app
 ```
 
 `SUPABASE_SERVICE_ROLE_KEY` はサーバー専用です。`NEXT_PUBLIC_` を付けず、ブラウザ・GitHub・ログに出さないでください。SQL は店舗データの読み取りだけを公開し、書き込みはサービスロールを使う `/api/import` だけに限定しています。
+
+### フェーズ2：混雑予測の設定
+
+既存プロジェクトでは、Supabase SQL Editor で [`supabase/20260725_congestion_phase2.sql`](./supabase/20260725_congestion_phase2.sql) を一度実行してください。これにより、ユーザーが投稿した待ち時間を保存する `wait_reports` テーブルが作成されます。
+
+店舗詳細では、同じ曜日・時間帯の投稿実績を優先して待ち時間を算出します。投稿数が少ない場合は店舗全体の実績とランチ／ディナーの時間帯を基準とし、高評価店・祝日／週末・雨を補正に使います。天気はキー不要のOpen-Meteo Forecast APIからサーバー側で取得します。実績が少ない段階では予測精度が低いため、画面上の信頼度とともに参考値として扱ってください。
+
+### Google Maps URL・店舗写真の設定
+
+既存プロジェクトでは、Supabase SQL Editor で [`supabase/20260725_shop_media.sql`](./supabase/20260725_shop_media.sql) を一度実行してください。その後、`POST /api/import` を再実行すると、各店舗のGoogle Maps URL、先頭の店舗写真、写真提供者情報を更新します。
+
+写真は `GET /api/shop-photo` でサーバーが一時的な写真URLを取得して表示するため、`GOOGLE_PLACES_API_KEY` はブラウザに公開されません。Google Placesの写真取得と、`photos` フィールドを含む再取り込みは課金対象になり得るため、Google Cloudの予算アラートを設定してから実行してください。
 
 ## Google Places API (New) 設定
 

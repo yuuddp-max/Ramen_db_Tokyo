@@ -15,6 +15,9 @@ export type RamenShop = {
   price_level: string | null;
   business_status: string | null;
   genres: string[] | null;
+  google_maps_uri: string | null;
+  photo_name: string | null;
+  photo_attributions: { displayName?: string; uri?: string; photoUri?: string }[] | null;
   nearest_station: string | null;
   nearest_station_distance_m: number | null;
   station_checked_at: string | null;

@@ -16,6 +16,9 @@ create table if not exists public.ramen_shops (
   price_level text,
   business_status text,
   genres text[],
+  google_maps_uri text,
+  photo_name text,
+  photo_attributions jsonb,
   nearest_station text,
   nearest_station_distance_m integer check (nearest_station_distance_m >= 0),
   station_checked_at timestamptz,
@@ -51,3 +54,15 @@ alter table public.favorites enable row level security;
 create policy "Users can read own favorites" on public.favorites for select using (auth.uid() = user_id);
 create policy "Users can add own favorites" on public.favorites for insert with check (auth.uid() = user_id);
 create policy "Users can remove own favorites" on public.favorites for delete using (auth.uid() = user_id);
+
+-- Phase 2: anonymous wait-time reports are written only by the server API.
+create table if not exists public.wait_reports (
+  id uuid primary key default gen_random_uuid(),
+  shop_id uuid not null references public.ramen_shops(id) on delete cascade,
+  wait_minutes integer not null check (wait_minutes >= 0 and wait_minutes <= 240),
+  reported_at timestamptz not null default now(),
+  source text not null default 'web' check (source in ('web'))
+);
+create index if not exists wait_reports_shop_reported_at_idx on public.wait_reports (shop_id, reported_at desc);
+alter table public.wait_reports enable row level security;
+create policy "Anyone can read wait reports" on public.wait_reports for select using (true);

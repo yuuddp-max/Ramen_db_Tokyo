@@ -1,16 +1,9 @@
 import type { RamenShop } from "@/types/ramen";
 import { supabaseAdmin } from "./supabase";
-import { calculateDistanceMeters, normalizeOpeningTimeText } from "./utils";
+import { calculateDistanceMeters, getTodayOpeningHours } from "./utils";
 export { inferRamenStyle } from "./utils";
 
-export function getTodayHours(openingHours: string[] | null) {
-  if (!openingHours?.length) return null;
-  const weekday = new Intl.DateTimeFormat("ja-JP", { weekday: "long", timeZone: "Asia/Tokyo" }).format(new Date());
-  const today = openingHours.find((hours) => hours.startsWith(weekday)) ?? openingHours[0];
-  if (/24\s*時間営業|24\s*hours?/i.test(today)) return { description: today, opensAt: "00:00", closesAt: "24:00" };
-  const match = normalizeOpeningTimeText(today).match(/(\d{1,2}:\d{2})\s*[–〜-]\s*(\d{1,2}:\d{2})/);
-  return { description: today, opensAt: match?.[1] ?? null, closesAt: match?.[2] ?? null };
-}
+export const getTodayHours = getTodayOpeningHours;
 
 export function estimateVisit(shop: RamenShop) {
   const hour = Number(new Intl.DateTimeFormat("en-GB", { hour: "2-digit", hourCycle: "h23", timeZone: "Asia/Tokyo" }).format(new Date()));

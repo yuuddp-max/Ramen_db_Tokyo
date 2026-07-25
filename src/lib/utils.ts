@@ -46,6 +46,16 @@ function normalizeOpeningHours(value: unknown): string[] {
   return [];
 }
 
+export function getTodayOpeningHours(openingHours: unknown) {
+  const hours = normalizeOpeningHours(openingHours);
+  if (!hours.length) return null;
+  const weekday = new Intl.DateTimeFormat("ja-JP", { weekday: "long", timeZone: "Asia/Tokyo" }).format(new Date());
+  const description = hours.find((entry) => entry.startsWith(weekday)) ?? hours[0];
+  if (/24\s*時間営業|24\s*hours?/i.test(description)) return { description, opensAt: "00:00", closesAt: "24:00" };
+  const match = normalizeOpeningTimeText(description).match(/(\d{1,2}:\d{2})\s*[–〜～-]\s*(\d{1,2}:\d{2})/);
+  return { description, opensAt: match?.[1] ?? null, closesAt: match?.[2] ?? null };
+}
+
 export function getCurrentOpenStatus(openingHours: unknown) {
   const hours = normalizeOpeningHours(openingHours);
   if (!hours.length) return { label: "営業時間不明", open: false, known: false };
@@ -58,7 +68,7 @@ export function getCurrentOpenStatus(openingHours: unknown) {
 
   const parts = new Intl.DateTimeFormat("en-GB", { hour: "2-digit", minute: "2-digit", hourCycle: "h23", timeZone: "Asia/Tokyo" }).formatToParts(now);
   const minuteOfDay = Number(parts.find((part) => part.type === "hour")?.value ?? 0) * 60 + Number(parts.find((part) => part.type === "minute")?.value ?? 0);
-  const periods = [...normalizeOpeningTimeText(today).matchAll(/(\d{1,2}):(\d{2})\s*[–〜-]\s*(\d{1,2}):(\d{2})/g)];
+  const periods = [...normalizeOpeningTimeText(today).matchAll(/(\d{1,2}):(\d{2})\s*[–〜～-]\s*(\d{1,2}):(\d{2})/g)];
   if (!periods.length) return { label: "営業時間不明", open: false, known: false };
   const open = periods.some((match) => {
     const start = Number(match[1]) * 60 + Number(match[2]);
