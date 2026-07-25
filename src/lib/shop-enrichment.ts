@@ -1,5 +1,6 @@
 import type { RamenShop } from "@/types/ramen";
 import { supabaseAdmin } from "./supabase";
+import { calculateDistanceMeters } from "./utils";
 export { inferRamenStyle } from "./utils";
 
 export function getTodayHours(openingHours: string[] | null) {
@@ -21,15 +22,6 @@ export function estimateVisit(shop: RamenShop) {
 
 type StationResult = { name: string; distanceM: number } | null;
 type PlaceResult = { displayName?: { text?: string }; location?: { latitude?: number; longitude?: number }; types?: string[] };
-
-function distanceMeters(lat1: number, lon1: number, lat2: number, lon2: number) {
-  const toRadians = (value: number) => (value * Math.PI) / 180;
-  const earthRadius = 6_371_000;
-  const dLat = toRadians(lat2 - lat1);
-  const dLon = toRadians(lon2 - lon1);
-  const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRadians(lat1)) * Math.cos(toRadians(lat2)) * Math.sin(dLon / 2) ** 2;
-  return Math.round(earthRadius * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
-}
 
 async function findNearestStation(shop: RamenShop): Promise<StationResult> {
   const apiKey = process.env.GOOGLE_PLACES_API_KEY;
@@ -60,7 +52,7 @@ async function findNearestStation(shop: RamenShop): Promise<StationResult> {
   const closest = stations
     .map((station) => ({
       name: station.displayName!.text!,
-      distanceM: distanceMeters(shop.latitude, shop.longitude, station.location!.latitude!, station.location!.longitude!),
+      distanceM: calculateDistanceMeters(shop.latitude, shop.longitude, station.location!.latitude!, station.location!.longitude!),
     }))
     .sort((a, b) => a.distanceM - b.distanceM)[0];
   return closest;
