@@ -1,11 +1,6 @@
 import type { RamenShop } from "@/types/ramen";
 import { supabaseAdmin } from "./supabase";
-
-const ramenStyles = ["二郎系", "家系", "つけ麺", "油そば", "まぜそば", "豚骨", "味噌", "塩", "醤油"];
-
-export function inferRamenStyle(name: string) {
-  return ramenStyles.find((style) => name.includes(style)) ?? "ラーメン";
-}
+export { inferRamenStyle } from "./utils";
 
 export function getTodayHours(openingHours: string[] | null) {
   if (!openingHours?.length) return null;

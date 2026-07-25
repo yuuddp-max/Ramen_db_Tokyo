@@ -7,7 +7,8 @@ export async function GET(request: NextRequest) {
   const query = params.get("q")?.trim() ?? "";
   const genre = params.get("genre")?.trim() ?? "";
   const style = params.get("style")?.trim() ?? "";
-  const sort = params.get("sort") === "newest" ? "newest" : "rating";
+  const sortValue = params.get("sort");
+  const sort = sortValue === "newest" || sortValue === "reviews" ? sortValue : "rating";
   const limit = Math.min(Math.max(Number(params.get("limit")) || 60, 1), 100);
   const offset = Math.max(Number(params.get("offset")) || 0, 0);
   let builder = supabase.from("ramen_shops").select("*", { count: "exact" });
@@ -16,7 +17,9 @@ export async function GET(request: NextRequest) {
   if (style) builder = builder.ilike("name", `%${style}%`);
   builder = sort === "newest"
     ? builder.order("created_at", { ascending: false })
-    : builder.order("rating", { ascending: false, nullsFirst: false });
+    : sort === "reviews"
+      ? builder.order("user_ratings_total", { ascending: false, nullsFirst: false })
+      : builder.order("rating", { ascending: false, nullsFirst: false });
   const { data, error, count } = await builder.range(offset, offset + limit - 1);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ shops: data ?? [], total: count ?? 0 });

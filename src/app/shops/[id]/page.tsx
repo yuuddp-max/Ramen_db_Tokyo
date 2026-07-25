@@ -2,8 +2,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { FavoriteButton } from "@/components/FavoriteButton";
 import { MapView } from "@/components/MapView";
-import { formatPriceLevel, formatStatus } from "@/lib/utils";
-import { estimateVisit, getNearestStation, getTodayHours, inferRamenStyle } from "@/lib/shop-enrichment";
+import { formatPriceLevel, formatStatus, inferRamenStyle } from "@/lib/utils";
+import { estimateVisit, getNearestStation, getTodayHours } from "@/lib/shop-enrichment";
 import { supabase } from "@/lib/supabase";
 import type { RamenShop } from "@/types/ramen";
 
