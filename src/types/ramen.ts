@@ -24,6 +24,7 @@ export type RamenShop = {
   researched_soup_type: string | null;
   researched_style: string | null;
   research_confidence: "high" | "medium" | "low" | null;
+  research_status: "pending" | "draft" | "approved" | "rejected" | null;
   research_evidence_url: string | null;
   research_evidence_summary: string | null;
   research_updated_at: string | null;

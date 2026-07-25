@@ -2,12 +2,14 @@ import Link from "next/link";
 import type { RamenShop } from "@/types/ramen";
 import { formatPriceLevel, getCurrentOpenStatus, getTodayOpeningHours } from "@/lib/utils";
 import { classifyRamen } from "@/lib/ramen-genres";
+import { ShopPhotoThumbnail } from "./ShopPhotoThumbnail";
 
-export function ShopCard({ shop, index, distanceM }: { shop: RamenShop; index: number; distanceM?: number }) {
+export function ShopCard({ shop, index, distanceM, selected = false }: { shop: RamenShop; index: number; distanceM?: number; selected?: boolean }) {
   const openStatus = getCurrentOpenStatus(shop.opening_hours);
   const todayHours = getTodayOpeningHours(shop.opening_hours);
   const ramen = classifyRamen(shop.name);
-  return <Link href={`/shops/${shop.id}`} className="panel group block rounded-2xl p-4 transition hover:-translate-y-1 hover:border-gold/60">
+  return <Link id={`shop-card-${shop.id}`} href={`/shops/${shop.id}`} className={`panel group block rounded-2xl p-4 transition hover:-translate-y-1 hover:border-gold/60 ${selected ? "border-gold ring-1 ring-gold/40" : ""}`}>
+    {shop.photo_name && <ShopPhotoThumbnail shopId={shop.id} shopName={shop.name} />}
     <div className="flex items-start justify-between gap-4">
       <div className="min-w-0"><span className="text-xs font-bold tracking-[.15em] text-gold">#{String(index + 1).padStart(2, "0")}</span><h2 className="mt-1 truncate text-lg font-bold text-stone-100 group-hover:text-gold">{shop.name}</h2></div>
       <div className="shrink-0 text-right"><p className="text-sm font-bold text-gold">★ {shop.rating?.toFixed(1) ?? "–"}</p><p className="mt-1 text-xs text-stone-500">{shop.user_ratings_total?.toLocaleString() ?? 0} 件</p></div>

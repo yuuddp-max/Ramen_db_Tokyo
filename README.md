@@ -49,6 +49,32 @@ NEXT_PUBLIC_SITE_URL=https://your-domain.vercel.app
 
 写真は `GET /api/shop-photo` でサーバーが一時的な写真URLを取得して表示するため、`GOOGLE_PLACES_API_KEY` はブラウザに公開されません。Google Placesの写真取得と、`photos` フィールドを含む再取り込みは課金対象になり得るため、Google Cloudの予算アラートを設定してから実行してください。
 
+### AIによるスープ系統の調査（下書き→承認）
+
+1. Supabase SQL Editor で [`supabase/20260725_researched_soup_types.sql`](./supabase/20260725_researched_soup_types.sql) を一度実行します。今回の10店は公開済み（`approved`）、残りは未調査（`pending`）になります。
+2. OpenAI Platform のAPIキーを `OPENAI_API_KEY`、呼び出し保護用の十分長いランダム文字列を `RESEARCH_API_SECRET` として、Vercelの **Production** 環境変数に設定します。どちらもブラウザには公開しません。
+3. 1回につき最大3店をAIがWeb検索し、根拠URLつきの結果をまず `draft` として保存します。公開前に確認してください。
+
+```bash
+# 未調査の最大3店をAIに調査させ、下書きとして保存する
+curl -X POST https://your-domain.vercel.app/api/research/soup \
+  -H "Content-Type: application/json" \
+  -H "x-research-secret: $RESEARCH_API_SECRET" \
+  -d '{"limit":3}'
+
+# 下書きの確認（URL・分類・信頼度を返す）
+curl https://your-domain.vercel.app/api/research/soup?status=draft \
+  -H "x-research-secret: $RESEARCH_API_SECRET"
+
+# 確認済みのPlace IDだけを公開する
+curl -X POST https://your-domain.vercel.app/api/research/soup/approve \
+  -H "Content-Type: application/json" \
+  -H "x-research-secret: $RESEARCH_API_SECRET" \
+  -d '{"placeIds":["ChIJ..."]}'
+```
+
+Windows PowerShellでは `$RESEARCH_API_SECRET` を `$env:RESEARCH_API_SECRET` に置き換えてください。Web検索とOpenAI APIは課金対象になり得るため、最初は1〜3店ずつ実行してください。下書きはサイトへ公開されず、承認済みの結果だけが店舗詳細の「スープ系統」に反映されます。
+
 ## Google Places API (New) 設定
 
 1. Google Cloud でプロジェクトと Billing を有効にします。

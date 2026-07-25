@@ -7,9 +7,9 @@ declare global {
   interface Window { google?: { maps: any }; }
 }
 
-type Props = { shops: RamenShop[]; selected?: RamenShop; currentLocation?: { latitude: number; longitude: number } | null; className?: string };
+type Props = { shops: RamenShop[]; selected?: RamenShop; currentLocation?: { latitude: number; longitude: number } | null; onShopSelect?: (shop: RamenShop) => void; className?: string };
 
-export function MapView({ shops, selected, currentLocation, className = "" }: Props) {
+export function MapView({ shops, selected, currentLocation, onShopSelect, className = "" }: Props) {
   const mapElement = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -31,6 +31,7 @@ export function MapView({ shops, selected, currentLocation, className = "" }: Pr
           position: { lat: shop.latitude, lng: shop.longitude }, map, title: shop.name,
         });
         marker.addListener("click", () => {
+          onShopSelect?.(shop);
           const content = document.createElement("div");
           content.className = "min-w-[180px] p-1 text-slate-900";
           const name = document.createElement("p");
@@ -81,7 +82,7 @@ export function MapView({ shops, selected, currentLocation, className = "" }: Pr
     script.onload = initialise;
     document.head.appendChild(script);
     return () => { script.onload = null; destroyMap?.(); };
-  }, [shops, selected, currentLocation]);
+  }, [shops, selected, currentLocation, onShopSelect]);
 
   if (!process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY) {
     return <div className={`map-grid grid place-items-center text-center text-sm text-stone-400 ${className}`}><p>Google Maps APIキーを設定すると<br />地図を表示できます。</p></div>;

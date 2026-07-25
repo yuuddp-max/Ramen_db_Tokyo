@@ -1,0 +1,78 @@
+const SOUP_TYPES = ["醤油", "塩", "味噌", "豚骨", "豚骨醤油", "鶏白湯", "煮干し", "魚介", "牛骨", "担々麺", "つけ麺", "油そば", "その他", "複数", "未確認"] as const;
+const CONFIDENCE = ["high", "medium", "low"] as const;
+
+export type SoupResearch = {
+  soupType: (typeof SOUP_TYPES)[number];
+  style: string;
+  confidence: (typeof CONFIDENCE)[number];
+  evidenceUrl: string;
+  evidenceSummary: string;
+};
+
+type ResearchInput = { name: string; address: string | null; website: string | null };
+
+const researchSchema = {
+  type: "object",
+  additionalProperties: false,
+  required: ["soupType", "style", "confidence", "evidenceUrl", "evidenceSummary"],
+  properties: {
+    soupType: { type: "string", enum: SOUP_TYPES },
+    style: { type: "string" },
+    confidence: { type: "string", enum: CONFIDENCE },
+    evidenceUrl: { type: "string" },
+    evidenceSummary: { type: "string" },
+  },
+};
+
+function validateResearch(value: unknown): SoupResearch {
+  if (!value || typeof value !== "object") throw new Error("AI research response is not an object.");
+  const record = value as Record<string, unknown>;
+  if (
+    typeof record.soupType !== "string" || !SOUP_TYPES.includes(record.soupType as SoupResearch["soupType"]) ||
+    typeof record.style !== "string" || record.style.length > 160 ||
+    typeof record.confidence !== "string" || !CONFIDENCE.includes(record.confidence as SoupResearch["confidence"]) ||
+    typeof record.evidenceUrl !== "string" ||
+    typeof record.evidenceSummary !== "string" || record.evidenceSummary.length > 280
+  ) throw new Error("AI research response did not match the required schema.");
+
+  let evidenceUrl: URL;
+  try { evidenceUrl = new URL(record.evidenceUrl); } catch { throw new Error("AI research response did not include a valid evidence URL."); }
+  if (evidenceUrl.protocol !== "https:") throw new Error("Evidence URL must use HTTPS.");
+  return {
+    soupType: record.soupType as SoupResearch["soupType"],
+    style: record.style.trim(),
+    confidence: record.confidence as SoupResearch["confidence"],
+    evidenceUrl: evidenceUrl.toString(),
+    evidenceSummary: record.evidenceSummary.trim(),
+  };
+}
+
+export async function researchSoup(input: ResearchInput): Promise<SoupResearch> {
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) throw new Error("OPENAI_API_KEY is not configured.");
+  const prompt = [
+    "東京都のラーメン店について、スープ系統を根拠付きで調査してください。",
+    "Web検索を使い、公式店舗サイト・公式メニュー・公式SNSを優先してください。",
+    "憶測は禁止です。根拠が十分でなければ soupType を「未確認」、confidence を「low」にしてください。",
+    "分類は指定された選択肢だけを使います。複数の主力スープを確認できるときだけ「複数」にしてください。",
+    "evidenceUrl には、結論を確認できるHTTPSの直接URLを1つだけ入れてください。",
+    "style と evidenceSummary は日本語で簡潔に書いてください。",
+    `店名: ${input.name}`,
+    `住所: ${input.address ?? "不明"}`,
+    `公式サイト候補: ${input.website ?? "不明"}`,
+  ].join("\n");
+  const response = await fetch("https://api.openai.com/v1/responses", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      model: process.env.OPENAI_RESEARCH_MODEL || "gpt-5.6-sol",
+      input: prompt,
+      tools: [{ type: "web_search_preview", search_context_size: "medium" }],
+      text: { format: { type: "json_schema", name: "ramen_soup_research", strict: true, schema: researchSchema } },
+    }),
+  });
+  const payload = await response.json().catch(() => null) as { output_text?: string; error?: { message?: string } } | null;
+  if (!response.ok) throw new Error(payload?.error?.message || `OpenAI API request failed (${response.status}).`);
+  if (!payload?.output_text) throw new Error("OpenAI API returned no structured research result.");
+  try { return validateResearch(JSON.parse(payload.output_text)); } catch (error) { throw new Error(error instanceof Error ? error.message : "Could not parse AI research result."); }
+}
