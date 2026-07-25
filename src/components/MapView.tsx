@@ -7,9 +7,9 @@ declare global {
   interface Window { google?: { maps: any }; }
 }
 
-type Props = { shops: RamenShop[]; selected?: RamenShop; className?: string };
+type Props = { shops: RamenShop[]; selected?: RamenShop; currentLocation?: { latitude: number; longitude: number } | null; className?: string };
 
-export function MapView({ shops, selected, className = "" }: Props) {
+export function MapView({ shops, selected, currentLocation, className = "" }: Props) {
   const mapElement = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -20,10 +20,10 @@ export function MapView({ shops, selected, className = "" }: Props) {
     const initialise = () => {
       const googleMaps = window.google?.maps;
       if (!googleMaps || !mapElement.current) return;
-      const focus = selected ?? shops[0];
+      const focus = selected ?? (currentLocation ? { latitude: currentLocation.latitude, longitude: currentLocation.longitude } : shops[0]);
       const map = new googleMaps.Map(mapElement.current, {
         center: focus ? { lat: focus.latitude, lng: focus.longitude } : { lat: 35.6762, lng: 139.6503 },
-        zoom: selected ? 15 : 11,
+        zoom: selected ? 15 : currentLocation ? 13 : 11,
       });
       const infoWindow = new googleMaps.InfoWindow();
       const markers = shops.map((shop) => {
@@ -49,6 +49,22 @@ export function MapView({ shops, selected, className = "" }: Props) {
         });
         return marker;
       });
+      if (currentLocation) {
+        markers.push(new googleMaps.Marker({
+          position: { lat: currentLocation.latitude, lng: currentLocation.longitude },
+          map,
+          title: "現在地",
+          zIndex: 10,
+          icon: {
+            path: googleMaps.SymbolPath.CIRCLE,
+            scale: 8,
+            fillColor: "#e4ad42",
+            fillOpacity: 1,
+            strokeColor: "#111111",
+            strokeWeight: 2,
+          },
+        }));
+      }
       destroyMap = () => { infoWindow.close(); markers.forEach((marker: any) => marker.setMap(null)); };
     };
 
@@ -65,7 +81,7 @@ export function MapView({ shops, selected, className = "" }: Props) {
     script.onload = initialise;
     document.head.appendChild(script);
     return () => { script.onload = null; destroyMap?.(); };
-  }, [shops, selected]);
+  }, [shops, selected, currentLocation]);
 
   if (!process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY) {
     return <div className={`map-grid grid place-items-center text-center text-sm text-stone-400 ${className}`}><p>Google Maps APIキーを設定すると<br />地図を表示できます。</p></div>;

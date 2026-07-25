@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
-import { getCurrentOpenStatus } from "@/lib/utils";
+import { calculateDistanceMeters, getCurrentOpenStatus } from "@/lib/utils";
 import { matchesRamenTaxonomy } from "@/lib/ramen-genres";
 
 export async function GET(request: NextRequest) {
@@ -15,9 +15,14 @@ export async function GET(request: NextRequest) {
   const price = params.get("price")?.trim() ?? "";
   const rawIds = params.get("ids");
   const openNow = params.get("openNow") === "true";
+  const rawLatitude = params.get("latitude");
+  const rawLongitude = params.get("longitude");
+  const latitude = rawLatitude === null ? Number.NaN : Number(rawLatitude);
+  const longitude = rawLongitude === null ? Number.NaN : Number(rawLongitude);
+  const hasLocation = Number.isFinite(latitude) && Number.isFinite(longitude) && Math.abs(latitude) <= 90 && Math.abs(longitude) <= 180;
   const ids = rawIds?.split(",").filter((id) => /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id)).slice(0, 100) ?? [];
   const sortValue = params.get("sort");
-  const sort = sortValue === "newest" || sortValue === "reviews" ? sortValue : "rating";
+  const sort = sortValue === "newest" || sortValue === "reviews" || (sortValue === "distance" && hasLocation) ? sortValue : "rating";
   const limit = Math.min(Math.max(Number(params.get("limit")) || 60, 1), 100);
   const offset = Math.max(Number(params.get("offset")) || 0, 0);
   let builder = supabase.from("ramen_shops").select("*", { count: "exact" });
@@ -43,13 +48,14 @@ export async function GET(request: NextRequest) {
     : sort === "reviews"
       ? builder.order("user_ratings_total", { ascending: false, nullsFirst: false })
       : builder.order("rating", { ascending: false, nullsFirst: false });
-  if (openNow || soup || style) {
-    const [firstPage, secondPage] = await Promise.all([builder.range(0, 999), builder.range(1000, 1999)]);
-    const error = firstPage.error ?? secondPage.error;
+  if (openNow || soup || style || sort === "distance") {
+    const [firstPage, secondPage, thirdPage] = await Promise.all([builder.range(0, 999), builder.range(1000, 1999), builder.range(2000, 2999)]);
+    const error = firstPage.error ?? secondPage.error ?? thirdPage.error;
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-    const matchingShops = [...(firstPage.data ?? []), ...(secondPage.data ?? [])].filter((shop) =>
+    const matchingShops = [...(firstPage.data ?? []), ...(secondPage.data ?? []), ...(thirdPage.data ?? [])].filter((shop) =>
       (!openNow || getCurrentOpenStatus(shop.opening_hours).open) && matchesRamenTaxonomy(shop.name, soup, style),
     );
+    if (sort === "distance") matchingShops.sort((a, b) => calculateDistanceMeters(latitude, longitude, a.latitude, a.longitude) - calculateDistanceMeters(latitude, longitude, b.latitude, b.longitude));
     return NextResponse.json({ shops: matchingShops.slice(offset, offset + limit), total: matchingShops.length });
   }
   const { data, error, count } = await builder.range(offset, offset + limit - 1);
