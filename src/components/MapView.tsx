@@ -15,6 +15,7 @@ export function MapView({ shops, selected, className = "" }: Props) {
   useEffect(() => {
     const key = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
     if (!key || !mapElement.current) return;
+    let destroyMap: (() => void) | undefined;
 
     const initialise = () => {
       const googleMaps = window.google?.maps;
@@ -32,23 +33,46 @@ export function MapView({ shops, selected, className = "" }: Props) {
           { featureType: "water", elementType: "geometry", stylers: [{ color: "#121212" }] },
         ],
       });
-      shops.forEach((shop) => {
+      const infoWindow = new googleMaps.InfoWindow();
+      const markers = shops.map((shop) => {
         const marker = new googleMaps.Marker({
           position: { lat: shop.latitude, lng: shop.longitude }, map, title: shop.name,
         });
-        marker.addListener("click", () => { window.location.href = `/shops/${shop.id}`; });
+        marker.addListener("click", () => {
+          const content = document.createElement("div");
+          content.className = "min-w-[180px] p-1 text-slate-900";
+          const name = document.createElement("p");
+          name.className = "font-bold";
+          name.textContent = shop.name;
+          const rating = document.createElement("p");
+          rating.className = "mt-1 text-sm";
+          rating.textContent = `★ ${shop.rating?.toFixed(1) ?? "–"} （${shop.user_ratings_total?.toLocaleString() ?? 0}件）`;
+          const link = document.createElement("a");
+          link.href = `/shops/${shop.id}`;
+          link.className = "mt-2 inline-block text-sm font-bold text-amber-700 underline";
+          link.textContent = "店舗詳細を見る";
+          content.append(name, rating, link);
+          infoWindow.setContent(content);
+          infoWindow.open({ map, anchor: marker });
+        });
+        return marker;
       });
+      destroyMap = () => { infoWindow.close(); markers.forEach((marker: any) => marker.setMap(null)); };
     };
 
-    if (window.google?.maps) { initialise(); return; }
+    if (window.google?.maps) { initialise(); return () => destroyMap?.(); }
     const existing = document.querySelector<HTMLScriptElement>("script[data-google-maps]");
-    if (existing) { existing.addEventListener("load", initialise); return () => existing.removeEventListener("load", initialise); }
+    if (existing) {
+      existing.addEventListener("load", initialise);
+      return () => { existing.removeEventListener("load", initialise); destroyMap?.(); };
+    }
     const script = document.createElement("script");
     script.dataset.googleMaps = "true";
     script.src = `https://maps.googleapis.com/maps/api/js?key=${key}&v=weekly`;
     script.async = true;
     script.onload = initialise;
     document.head.appendChild(script);
+    return () => { script.onload = null; destroyMap?.(); };
   }, [shops, selected]);
 
   if (!process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY) {
