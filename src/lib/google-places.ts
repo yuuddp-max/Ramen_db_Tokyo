@@ -13,6 +13,8 @@ type GooglePlace = {
   types?: string[];
 };
 
+type TextSearchResponse = { places?: GooglePlace[]; nextPageToken?: string };
+
 export type ImportedShop = {
   place_id: string;
   name: string;
@@ -83,7 +85,7 @@ function toShop(place: GooglePlace): ImportedShop | null {
   };
 }
 
-export async function searchTokyoRamen(query = "ラーメン 東京") {
+async function searchTokyoRamenPage(query: string, pageToken?: string) {
   const apiKey = process.env.GOOGLE_PLACES_API_KEY;
   if (!apiKey) throw new Error("GOOGLE_PLACES_API_KEY が設定されていません。");
 
@@ -105,16 +107,44 @@ export async function searchTokyoRamen(query = "ラーメン 東京") {
           high: { latitude: 35.9, longitude: 139.92 },
         },
       },
+      ...(pageToken ? { pageToken } : {}),
     }),
     cache: "no-store",
   });
 
   if (!response.ok) throw new Error(`Places API error: ${response.status} ${await response.text()}`);
-  const json = (await response.json()) as { places?: GooglePlace[] };
-  return (json.places ?? []).map(toShop).filter((shop): shop is ImportedShop => shop !== null);
+  const json = (await response.json()) as TextSearchResponse;
+  return {
+    shops: (json.places ?? []).map(toShop).filter((shop): shop is ImportedShop => shop !== null),
+    nextPageToken: json.nextPageToken,
+  };
 }
 
-export async function searchAllTokyoRamen(queries = TOKYO_SEARCH_QUERIES) {
-  const groups = await Promise.all(queries.map((query) => searchTokyoRamen(query)));
-  return [...new Map(groups.flat().map((shop) => [shop.place_id, shop])).values()];
+export async function searchTokyoRamen(query = "ラーメン 東京") {
+  return (await searchTokyoRamenPage(query)).shops;
+}
+
+async function searchTokyoRamenPages(query: string, maxPages = 3) {
+  const shops: ImportedShop[] = [];
+  let pageToken: string | undefined;
+  for (let page = 0; page < maxPages; page += 1) {
+    const result = await searchTokyoRamenPage(query, pageToken);
+    shops.push(...result.shops);
+    if (!result.nextPageToken) break;
+    pageToken = result.nextPageToken;
+  }
+  return shops;
+}
+
+export async function searchAllTokyoRamen(queries = TOKYO_SEARCH_QUERIES, target = 2_000) {
+  const groups: ImportedShop[][] = [];
+  let nextIndex = 0;
+  const worker = async () => {
+    while (nextIndex < queries.length) {
+      const query = queries[nextIndex++];
+      groups.push(await searchTokyoRamenPages(query));
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(6, queries.length) }, worker));
+  return [...new Map(groups.flat().map((shop) => [shop.place_id, shop])).values()].slice(0, target);
 }

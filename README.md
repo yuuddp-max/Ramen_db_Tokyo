@@ -44,10 +44,10 @@ SUPABASE_SERVICE_ROLE_KEY=...
    - **ブラウザキー**: `Maps JavaScript API` に API 制限し、HTTP referrer を `http://localhost:3000/*` と本番ドメインに制限。`NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` に設定。
 4. 取り込み保護用に十分長いランダム文字列を `IMPORT_API_SECRET` に設定します。
 
-取り込みは、23区・26市・町村・島しょ部を含む東京都の全自治体を個別に検索します。検索結果は Place ID でメモリ上でも重複を除去し、DBでは `place_id` を競合キーに UPSERT します。Places API は課金対象のため、初回はリクエスト数を確認してから実行してください。
+取り込みは、23区・26市・町村・島しょ部を含む東京都の全自治体を個別に最大3ページ検索します。検索結果は Place ID でメモリ上でも重複を除去し、最大2,000店をDBの `place_id` を競合キーにUPSERTします。Places API は課金対象のため、初回はリクエスト数を確認してから実行してください。
 
 ```bash
-# 全東京エリアを取り込む（最大62回のText Search）
+# 全東京エリアを最大2,000店まで取り込む（最大186回のText Search）
 curl -X POST http://localhost:3000/api/import \
   -H "Content-Type: application/json" \
   -H "x-import-secret: $IMPORT_API_SECRET" \
@@ -58,6 +58,12 @@ curl -X POST http://localhost:3000/api/import \
   -H "Content-Type: application/json" \
   -H "x-import-secret: $IMPORT_API_SECRET" \
   -d '{"query":"ラーメン 神保町"}'
+
+# 取り込み上限を指定する（最大2,000店）
+curl -X POST http://localhost:3000/api/import \
+  -H "Content-Type: application/json" \
+  -H "x-import-secret: $IMPORT_API_SECRET" \
+  -d '{"target":2000}'
 ```
 
 Windows PowerShell では `$IMPORT_API_SECRET` を `$env:IMPORT_API_SECRET` に置き換えてください。定期更新する場合は、Vercel Cron または外部スケジューラから同じエンドポイントを呼び出してください。

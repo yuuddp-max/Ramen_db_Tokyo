@@ -4,6 +4,7 @@ import { supabaseAdmin } from "@/lib/supabase";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+export const maxDuration = 60;
 
 export async function POST(request: NextRequest) {
   const secret = request.headers.get("x-import-secret");
@@ -13,13 +14,15 @@ export async function POST(request: NextRequest) {
   if (!supabaseAdmin) return NextResponse.json({ error: "Supabase service role is not configured." }, { status: 500 });
   try {
     const body = await request.json().catch(() => ({}));
+    const target = Math.min(Math.max(Number(body.target) || 2_000, 1), 2_000);
     const shops = typeof body.query === "string"
       ? await searchTokyoRamen(body.query)
-      : await searchAllTokyoRamen();
+      : await searchAllTokyoRamen(undefined, target);
     if (!shops.length) return NextResponse.json({ imported: 0, message: "No shops returned by Places API." });
     const { error } = await supabaseAdmin.from("ramen_shops").upsert(shops, { onConflict: "place_id" });
     if (error) throw error;
-    return NextResponse.json({ imported: shops.length, placeIds: shops.map((shop) => shop.place_id) });
+    const { count } = await supabaseAdmin.from("ramen_shops").select("id", { count: "exact", head: true });
+    return NextResponse.json({ imported: shops.length, total: count ?? 0, target, placeIds: shops.map((shop) => shop.place_id) });
   } catch (error) {
     console.error("Ramen import failed", error);
     return NextResponse.json({ error: error instanceof Error ? error.message : "Import failed" }, { status: 500 });
