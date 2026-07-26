@@ -12,6 +12,9 @@ export type SoupResearch = {
 
 type ResearchInput = { name: string; address: string | null; website: string | null };
 
+const LOW_COST_RESEARCH_MODEL = process.env.OPENAI_LOW_COST_RESEARCH_MODEL || "gpt-5.4-nano";
+const MAX_WEBSITE_TEXT_LENGTH = 12_000;
+
 type ResponsesApiPayload = {
   status?: string;
   error?: { message?: string };
@@ -65,27 +68,17 @@ function getOutputText(payload: ResponsesApiPayload) {
     ?.text;
 }
 
-export async function researchSoup(input: ResearchInput): Promise<SoupResearch> {
+async function requestResearch(prompt: string, options: { model: string; useWebSearch: boolean }) {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) throw new Error("OPENAI_API_KEY is not configured.");
-  const prompt = [
-    "東京都のラーメン店について、簡易Web調査でスープ系統とスタイルを分類してください。",
-    "最初に公式店舗サイト・公式メニュー・公式SNSを確認し、見つからない場合だけ信頼できる紹介記事を1件確認してください。長い比較や追加調査はしません。",
-    "憶測は禁止です。根拠が十分でなければ soupType を「未確認」、confidence を「low」にしてください。",
-    "スープ系統とスタイルは、指定された選択肢だけを使います。複数の主力スープを確認できるときだけ「複数」にしてください。",
-    "evidenceUrl には、結論を確認できるHTTPSの直接URLを1つだけ入れてください。",
-    "style と evidenceSummary は日本語で簡潔に書いてください。",
-    `店名: ${input.name}`,
-    `住所: ${input.address ?? "不明"}`,
-    `公式サイト候補: ${input.website ?? "不明"}`,
-  ].join("\n");
+
   const response = await fetch("https://api.openai.com/v1/responses", {
     method: "POST",
     headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
     body: JSON.stringify({
-      model: process.env.OPENAI_RESEARCH_MODEL || "gpt-5.6-luna",
+      model: options.model,
       input: prompt,
-      tools: [{ type: "web_search", search_context_size: "medium" }],
+      ...(options.useWebSearch ? { tools: [{ type: "web_search", search_context_size: "low" }], max_tool_calls: 1 } : {}),
       reasoning: { effort: "low" },
       text: { verbosity: "low", format: { type: "json_schema", name: "ramen_soup_research", strict: true, schema: researchSchema } },
     }),
@@ -99,4 +92,76 @@ export async function researchSoup(input: ResearchInput): Promise<SoupResearch> 
     throw new Error(`OpenAI API returned no structured research result: ${payload.status ?? "unknown"}${reason}.`);
   }
   try { return validateResearch(JSON.parse(outputText)); } catch (error) { throw new Error(error instanceof Error ? error.message : "Could not parse AI research result."); }
+}
+
+function cleanWebsiteText(html: string) {
+  return html
+    .replace(/<!--[^]*?-->/g, " ")
+    .replace(/<(script|style|noscript|svg)[^>]*>[^]*?<\/\1>/gi, " ")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;/gi, "'")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, MAX_WEBSITE_TEXT_LENGTH);
+}
+
+async function getOfficialWebsiteContent(website: string | null) {
+  if (!website) return null;
+  let url: URL;
+  try { url = new URL(website); } catch { return null; }
+  if (url.protocol !== "https:") return null;
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 8_000);
+  try {
+    const response = await fetch(url, {
+      signal: controller.signal,
+      headers: { "User-Agent": "TokyoRamenResearchBot/1.0 (+https://ramen-db-tokyo-blush.vercel.app)" },
+    });
+    const contentType = response.headers.get("content-type") ?? "";
+    const contentLength = Number(response.headers.get("content-length") ?? "0");
+    if (!response.ok || !contentType.includes("text/html") || contentLength > 1_000_000) return null;
+    const text = cleanWebsiteText(await response.text());
+    return text.length >= 160 ? { url: url.toString(), text } : null;
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+export async function researchSoupFromOfficialWebsite(input: ResearchInput): Promise<SoupResearch | null> {
+  const website = await getOfficialWebsiteContent(input.website);
+  if (!website) return null;
+  const prompt = [
+    "東京都のラーメン店について、下記の公式サイト本文だけを根拠にスープ系統とスタイルを分類してください。",
+    "本文に明記されていないことを推測してはいけません。根拠が十分でなければ soupType を「未確認」、confidence を「low」にしてください。",
+    "スープ系統とスタイルは、指定された選択肢だけを使います。複数の主力スープを確認できるときだけ「複数」にしてください。",
+    "evidenceUrl には必ず次の公式URLをそのまま入れてください。",
+    "style と evidenceSummary は日本語で簡潔に書いてください。",
+    `店名: ${input.name}`,
+    `住所: ${input.address ?? "不明"}`,
+    `公式URL: ${website.url}`,
+    `公式サイト本文: ${website.text}`,
+  ].join("\n");
+  try { return await requestResearch(prompt, { model: LOW_COST_RESEARCH_MODEL, useWebSearch: false }); }
+  catch { return null; }
+}
+
+export async function researchSoup(input: ResearchInput): Promise<SoupResearch> {
+  const prompt = [
+    "東京都のラーメン店について、簡易Web調査でスープ系統とスタイルを分類してください。",
+    "最初に公式店舗サイト・公式メニュー・公式SNSを確認し、見つからない場合だけ信頼できる紹介記事を1件確認してください。長い比較や追加調査はしません。",
+    "憶測は禁止です。根拠が十分でなければ soupType を「未確認」、confidence を「low」にしてください。",
+    "スープ系統とスタイルは、指定された選択肢だけを使います。複数の主力スープを確認できるときだけ「複数」にしてください。",
+    "evidenceUrl には、結論を確認できるHTTPSの直接URLを1つだけ入れてください。",
+    "style と evidenceSummary は日本語で簡潔に書いてください。",
+    `店名: ${input.name}`,
+    `住所: ${input.address ?? "不明"}`,
+    `公式サイト候補: ${input.website ?? "不明"}`,
+  ].join("\n");
+  return requestResearch(prompt, { model: LOW_COST_RESEARCH_MODEL, useWebSearch: true });
 }
