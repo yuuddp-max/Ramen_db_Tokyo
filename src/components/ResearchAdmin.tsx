@@ -16,7 +16,9 @@ export function ResearchAdmin({ authenticated, drafts }: { authenticated: boolea
       const response = await fetch(url, { ...options, headers: { "Content-Type": "application/json", ...(options.headers ?? {}) } });
       const data = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(data.error ?? "処理に失敗しました。");
-      setMessage(data.researched != null ? `${data.researched}店を下書きとして作成しました。` : "保存しました。");
+      const failures = Array.isArray(data.results) ? data.results.filter((result: { status?: string }) => result.status === "failed") : [];
+      const failureDetails = failures.map((result: { name?: string; error?: string }) => `${result.name ?? "店舗"}: ${result.error ?? "調査に失敗しました。"}`).join(" / ");
+      setMessage(data.researched != null ? `${data.researched}店を下書きとして作成しました。${failureDetails ? ` 失敗: ${failureDetails}` : ""}` : "保存しました。");
       router.refresh();
     } catch (error) { setMessage(error instanceof Error ? error.message : "処理に失敗しました。"); }
     finally { setBusy(false); }
