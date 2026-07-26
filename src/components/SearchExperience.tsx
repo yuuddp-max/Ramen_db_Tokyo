@@ -25,6 +25,7 @@ export function SearchExperience({ initialShops, initialTotal }: Props) {
   const [page, setPage] = useState(1);
   const [initializedFromUrl, setInitializedFromUrl] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [hasLoadedNearbyResults, setHasLoadedNearbyResults] = useState(false);
   const [searchError, setSearchError] = useState("");
   const [favoriteOnly, setFavoriteOnly] = useState(false);
   const [recentOnly, setRecentOnly] = useState(false);
@@ -70,6 +71,12 @@ export function SearchExperience({ initialShops, initialTotal }: Props) {
 
   const requestLocation = useCallback((resetMap = false) => {
     if (!navigator.geolocation) { setLocationMessage("このブラウザは位置情報に対応していません。"); return; }
+    // Do not briefly render the server-side Tokyo-wide result while we are
+    // resolving the new 5km result for the user's current location.
+    setHasLoadedNearbyResults(false);
+    setShops([]);
+    setMapShops([]);
+    setTotal(0);
     setLocationMessage("現在地を取得中…");
     navigator.geolocation.getCurrentPosition(
       (position) => {
@@ -94,8 +101,10 @@ export function SearchExperience({ initialShops, initialTotal }: Props) {
     if (!initializedFromUrl || !userLocation) return;
     const controller = new AbortController();
     let isCurrent = true;
+    setLoading(true);
+    setHasLoadedNearbyResults(false);
     const timer = setTimeout(async () => {
-      setLoading(true); setSearchError("");
+      setSearchError("");
       try {
         const params = new URLSearchParams({ q: query, genre, soup, style, minRating, sort, limit: String(PAGE_SIZE), offset: String((page - 1) * PAGE_SIZE), latitude: String(userLocation.latitude), longitude: String(userLocation.longitude), radiusMeters: String(MAP_RADIUS_METERS) });
         if (favoriteOnly) params.set("ids", favoriteIdsKey);
@@ -104,11 +113,11 @@ export function SearchExperience({ initialShops, initialTotal }: Props) {
         const response = await fetch(`/api/shops?${params}`, { signal: controller.signal });
         if (!response.ok) throw new Error("検索結果を取得できませんでした。");
         const data = await response.json();
-        if (isCurrent) { setShops(data.shops ?? []); setMapShops(data.mapShops ?? data.shops ?? []); setTotal(data.total ?? 0); }
+        if (isCurrent) { setShops(data.shops ?? []); setMapShops(data.mapShops ?? data.shops ?? []); setTotal(data.total ?? 0); setHasLoadedNearbyResults(true); }
       } catch (error) {
         if (isCurrent && !(error instanceof DOMException && error.name === "AbortError")) setSearchError("検索結果を取得できませんでした。時間をおいて再度お試しください。");
       } finally { if (isCurrent) setLoading(false); }
-    }, 200);
+    }, 0);
     return () => { isCurrent = false; clearTimeout(timer); controller.abort(); };
   }, [query, genre, soup, style, minRating, sort, favoriteOnly, favoriteIdsKey, recentOnly, recentIdsKey, openOnly, page, initializedFromUrl, userLocation]);
 
@@ -131,16 +140,16 @@ export function SearchExperience({ initialShops, initialTotal }: Props) {
   }, [query, soup, style, favoriteOnly, recentOnly, openOnly]);
   const hasActiveFilters = Boolean(query || genre || soup || style || minRating || favoriteOnly || recentOnly || openOnly);
   const clearFilters = () => { setQuery(""); setGenre(""); setSoup(""); setStyle(""); setMinRating(""); setFavoriteOnly(false); setRecentOnly(false); setOpenOnly(false); setPage(1); };
-  const displayTotal = userLocation ? total : 0;
+  const displayTotal = userLocation && hasLoadedNearbyResults ? total : 0;
   const totalPages = Math.max(1, Math.ceil(displayTotal / PAGE_SIZE));
   const visibleStart = displayTotal ? (page - 1) * PAGE_SIZE + 1 : 0;
   const visibleEnd = Math.min(page * PAGE_SIZE, displayTotal);
   const goToPage = (nextPage: number) => { setPage(Math.min(Math.max(nextPage, 1), totalPages)); window.scrollTo({ top: 0, behavior: "smooth" }); };
   const selectShopFromMap = useCallback((shop: MapShop) => { setSelectedShopId(shop.id); window.setTimeout(() => document.getElementById(`shop-card-${shop.id}`)?.scrollIntoView({ behavior: "smooth", block: "center" }), 0); }, []);
-  const nearbyMapShops = useMemo(() => !userLocation ? [] : mapShops.filter((shop) => calculateDistanceMeters(userLocation.latitude, userLocation.longitude, shop.latitude, shop.longitude) <= MAP_RADIUS_METERS), [mapShops, userLocation]);
-  const visibleShops = userLocation ? shops : [];
+  const nearbyMapShops = useMemo(() => !userLocation || !hasLoadedNearbyResults ? [] : mapShops.filter((shop) => calculateDistanceMeters(userLocation.latitude, userLocation.longitude, shop.latitude, shop.longitude) <= MAP_RADIUS_METERS), [mapShops, userLocation, hasLoadedNearbyResults]);
+  const visibleShops = userLocation && hasLoadedNearbyResults ? shops : [];
 
-  const renderList = () => <>{loading && <p className="mb-4 text-sm text-gold">検索中…</p>}{visibleShops.length ? <><div className="panel overflow-hidden rounded-2xl">{visibleShops.map((shop) => <ShopCard key={shop.id} shop={shop} distanceM={userLocation ? calculateDistanceMeters(userLocation.latitude, userLocation.longitude, shop.latitude, shop.longitude) : undefined} selected={selectedShopId === shop.id} />)}</div><nav className="mt-8 flex items-center justify-center gap-3" aria-label="店舗一覧のページ送り"><button onClick={() => goToPage(page - 1)} disabled={page <= 1} className="rounded-xl border border-white/15 px-4 py-2 text-sm font-bold text-stone-300 transition hover:border-gold hover:text-gold disabled:cursor-not-allowed disabled:opacity-35">← 前へ</button><span className="text-sm text-stone-400"><strong className="text-stone-100">{page}</strong> / {totalPages} ページ</span><button onClick={() => goToPage(page + 1)} disabled={page >= totalPages} className="rounded-xl border border-gold/60 px-4 py-2 text-sm font-bold text-gold transition hover:bg-gold hover:text-ink disabled:cursor-not-allowed disabled:opacity-35">次ページへ →</button></nav></> : <div className="panel rounded-2xl px-6 py-16 text-center text-stone-400">{userLocation ? "半径5km以内に条件と一致する店舗がありません。" : "現在地を取得しています…"}</div>}</>;
+  const renderList = () => <>{loading && <p className="mb-4 text-sm text-gold">現在地の店舗を検索中…</p>}{visibleShops.length ? <><div className="panel overflow-hidden rounded-2xl">{visibleShops.map((shop) => <ShopCard key={shop.id} shop={shop} distanceM={userLocation ? calculateDistanceMeters(userLocation.latitude, userLocation.longitude, shop.latitude, shop.longitude) : undefined} selected={selectedShopId === shop.id} />)}</div><nav className="mt-8 flex items-center justify-center gap-3" aria-label="店舗一覧のページ送り"><button onClick={() => goToPage(page - 1)} disabled={page <= 1} className="rounded-xl border border-white/15 px-4 py-2 text-sm font-bold text-stone-300 transition hover:border-gold hover:text-gold disabled:cursor-not-allowed disabled:opacity-35">← 前へ</button><span className="text-sm text-stone-400"><strong className="text-stone-100">{page}</strong> / {totalPages} ページ</span><button onClick={() => goToPage(page + 1)} disabled={page >= totalPages} className="rounded-xl border border-gold/60 px-4 py-2 text-sm font-bold text-gold transition hover:bg-gold hover:text-ink disabled:cursor-not-allowed disabled:opacity-35">次ページへ →</button></nav></> : <div className="panel rounded-2xl px-6 py-16 text-center text-stone-400">{!userLocation ? "現在地を取得しています…" : !hasLoadedNearbyResults ? "現在地から半径5kmの店舗を検索しています…" : "半径5km以内に条件と一致する店舗がありません。"}</div>}</>;
 
   return <>
     <section className="relative overflow-hidden border-b border-white/10 bg-charcoal"><div className="grain absolute inset-0 opacity-60" /><div className="relative mx-auto max-w-7xl px-5 pb-12 pt-16 sm:px-8 sm:pt-24">
