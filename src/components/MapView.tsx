@@ -7,9 +7,10 @@ declare global {
   interface Window { google?: { maps: any }; }
 }
 
-type Props = { shops: RamenShop[]; selected?: RamenShop; currentLocation?: { latitude: number; longitude: number } | null; onShopSelect?: (shop: RamenShop) => void; className?: string };
+type MapBounds = { north: number; south: number; east: number; west: number };
+type Props = { shops: RamenShop[]; selected?: RamenShop; currentLocation?: { latitude: number; longitude: number } | null; onShopSelect?: (shop: RamenShop) => void; onBoundsChange?: (bounds: MapBounds) => void; className?: string };
 
-export function MapView({ shops, selected, currentLocation, onShopSelect, className = "" }: Props) {
+export function MapView({ shops, selected, currentLocation, onShopSelect, onBoundsChange, className = "" }: Props) {
   const mapElement = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -26,6 +27,13 @@ export function MapView({ shops, selected, currentLocation, onShopSelect, classN
         zoom: selected ? 15 : currentLocation ? 13 : 11,
       });
       const infoWindow = new googleMaps.InfoWindow();
+      const boundsListener = map.addListener("idle", () => {
+        const bounds = map.getBounds?.();
+        if (!bounds) return;
+        const northEast = bounds.getNorthEast();
+        const southWest = bounds.getSouthWest();
+        onBoundsChange?.({ north: northEast.lat(), east: northEast.lng(), south: southWest.lat(), west: southWest.lng() });
+      });
       const markers = shops.map((shop) => {
         const marker = new googleMaps.Marker({
           position: { lat: shop.latitude, lng: shop.longitude }, map, title: shop.name,
@@ -66,7 +74,7 @@ export function MapView({ shops, selected, currentLocation, onShopSelect, classN
           },
         }));
       }
-      destroyMap = () => { infoWindow.close(); markers.forEach((marker: any) => marker.setMap(null)); };
+      destroyMap = () => { googleMaps.event.removeListener(boundsListener); infoWindow.close(); markers.forEach((marker: any) => marker.setMap(null)); };
     };
 
     if (window.google?.maps) { initialise(); return () => destroyMap?.(); }
@@ -82,7 +90,7 @@ export function MapView({ shops, selected, currentLocation, onShopSelect, classN
     script.onload = initialise;
     document.head.appendChild(script);
     return () => { script.onload = null; destroyMap?.(); };
-  }, [shops, selected, currentLocation, onShopSelect]);
+  }, [shops, selected, currentLocation, onShopSelect, onBoundsChange]);
 
   if (!process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY) {
     return <div className={`map-grid grid place-items-center text-center text-sm text-stone-400 ${className}`}><p>Google Maps APIキーを設定すると<br />地図を表示できます。</p></div>;
