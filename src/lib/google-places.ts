@@ -93,7 +93,11 @@ function toShop(place: GooglePlace): ImportedShop | null {
   const latitude = place.location?.latitude;
   const longitude = place.location?.longitude;
   const name = place.displayName?.text;
+  const address = place.formattedAddress ?? null;
   if (!place.id || !name || latitude == null || longitude == null) return null;
+  // Text Search can only restrict by a rectangle, which also overlaps nearby
+  // prefectures. Keep only records whose formatted address is in Tokyo.
+  if (!address?.includes("東京都")) return null;
   // Low-rated records are not useful directory entries. Leave unrated places
   // untouched here; only an explicit rating of 1.0 or below is excluded.
   if (place.rating != null && place.rating <= 1) return null;
@@ -101,7 +105,7 @@ function toShop(place: GooglePlace): ImportedShop | null {
   return {
     place_id: place.id,
     name,
-    address: place.formattedAddress ?? null,
+    address,
     latitude,
     longitude,
     rating: place.rating ?? null,
@@ -170,7 +174,7 @@ export async function searchTokyoLocation(query: string) {
   return latitude != null && longitude != null ? { latitude, longitude } : null;
 }
 
-export async function searchTokyoRamen(query = "ラーメン 東京") {
+export async function searchTokyoRamen(query = "ラーメン") {
   return (await searchTokyoRamenPage(query)).shops;
 }
 
