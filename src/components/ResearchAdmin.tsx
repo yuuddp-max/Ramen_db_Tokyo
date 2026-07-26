@@ -23,13 +23,14 @@ type Draft = {
 
 type Metrics = { total: number; pending: number; draft: number; approved: number; rejected: number; missingRating: number; missingWebsite: number; missingPhoto: number };
 type ManualClassification = { soupType: string; style: string };
-type MenuKey = "research" | "google" | "summary" | "maintenance";
+type MenuKey = "research" | "google" | "summary" | "maintenance" | "hyakumeiten";
 
 const MENUS: { key: MenuKey; label: string; description: string }[] = [
   { key: "research", label: "AIスープ分類レビュー", description: "AIの分類結果を確認・手動補正して承認します。" },
   { key: "google", label: "Google Maps 新規データ取得", description: "Google Mapsで検索し、未登録の店舗だけを追加します。" },
   { key: "summary", label: "登録済みデータ 集計", description: "登録数・AI調査の進捗を集計します。" },
-  { key: "maintenance", label: "登録済みデータ メンテナンス", description: "不足データを確認し、百名店CSVなどの補足情報を管理します。" },
+  { key: "maintenance", label: "登録済みデータ メンテナンス", description: "不足している登録情報を確認します。" },
+  { key: "hyakumeiten", label: "百名店の一括取込", description: "利用権を確認した百名店CSVを一括で取り込みます。" },
 ];
 
 function isUnconfirmed(value: string | null) {
@@ -91,7 +92,7 @@ export function ResearchAdmin({ authenticated, drafts, metrics }: { authenticate
   return <main className="mx-auto max-w-6xl px-5 py-10 sm:px-8">
     <div className="flex flex-wrap items-end justify-between gap-4"><div><p className="text-xs font-bold tracking-[.2em] text-gold">ADMIN · RAMEN DATABASE</p><h1 className="mt-2 text-3xl font-black">管理画面</h1><p className="mt-2 text-sm text-stone-400">{active.description}</p></div><button disabled={busy} onClick={() => request("/api/research/admin/session", { method: "DELETE" })} className="rounded-xl border border-white/15 px-4 py-2 text-sm text-stone-400 disabled:opacity-50">ログアウト</button></div>
 
-    <nav className="mt-8 grid gap-2 sm:grid-cols-2 lg:grid-cols-4" aria-label="管理メニュー">{MENUS.map((menu) => <button key={menu.key} onClick={() => { setActiveMenu(menu.key); setMessage(""); }} className={`rounded-xl border px-4 py-3 text-left text-sm font-bold transition ${activeMenu === menu.key ? "border-gold bg-gold text-ink" : "border-white/10 bg-white/5 text-stone-300 hover:border-gold/60 hover:text-gold"}`}>{menu.label}</button>)}</nav>
+    <nav className="mt-8 grid gap-2 sm:grid-cols-2 lg:grid-cols-5" aria-label="管理メニュー">{MENUS.map((menu) => <button key={menu.key} onClick={() => { setActiveMenu(menu.key); setMessage(""); }} className={`rounded-xl border px-4 py-3 text-left text-sm font-bold transition ${activeMenu === menu.key ? "border-gold bg-gold text-ink" : "border-white/10 bg-white/5 text-stone-300 hover:border-gold/60 hover:text-gold"}`}>{menu.label}</button>)}</nav>
     {message && <p className="mt-5 rounded-xl border border-gold/40 bg-gold/10 px-4 py-3 text-sm text-gold">{message}</p>}
 
     {activeMenu === "research" && <section className="mt-8"><div className="flex flex-wrap gap-2"><button disabled={busy} onClick={() => request("/api/research/admin/run", { method: "POST" })} className="rounded-xl border border-gold px-4 py-2 text-sm font-bold text-gold disabled:opacity-50">AI調査を1店実行</button><button disabled={busy} onClick={() => request("/api/research/admin/run", { method: "POST", body: JSON.stringify({ limit: 10 }) })} className="rounded-xl bg-gold px-4 py-2 text-sm font-bold text-ink disabled:opacity-50">AI調査を10店実行</button></div><div className="mt-5 space-y-4">{drafts.length ? drafts.map((shop) => {
@@ -105,6 +106,8 @@ export function ResearchAdmin({ authenticated, drafts, metrics }: { authenticate
 
     {activeMenu === "summary" && <section className="mt-8"><div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4"><MetricCard label="登録店舗" value={metrics.total} tone="text-gold" /><MetricCard label="AI調査待ち" value={metrics.pending} /><MetricCard label="レビュー待ち" value={metrics.draft} tone="text-ramen" /><MetricCard label="承認済み" value={metrics.approved} tone="text-emerald-400" /><MetricCard label="却下" value={metrics.rejected} /><MetricCard label="Google評価未登録" value={metrics.missingRating} /><MetricCard label="公式サイト未登録" value={metrics.missingWebsite} /><MetricCard label="写真未登録" value={metrics.missingPhoto} /></div></section>}
 
-    {activeMenu === "maintenance" && <section className="mt-8 space-y-5"><div className="panel rounded-2xl p-6"><p className="text-xs font-bold tracking-[.2em] text-gold">DATA HEALTH</p><h2 className="mt-2 text-2xl font-black">登録データのメンテナンス</h2><p className="mt-3 text-sm leading-6 text-stone-400">不足している情報を確認し、Google Mapsの新規取得やAIスープ分類レビューで補完します。</p><div className="mt-5 grid gap-3 sm:grid-cols-3"><MetricCard label="Google評価未登録" value={metrics.missingRating} /><MetricCard label="公式サイト未登録" value={metrics.missingWebsite} /><MetricCard label="写真未登録" value={metrics.missingPhoto} /></div></div><TabelogAwardsImport /></section>}
+    {activeMenu === "maintenance" && <section className="mt-8"><div className="panel rounded-2xl p-6"><p className="text-xs font-bold tracking-[.2em] text-gold">DATA HEALTH</p><h2 className="mt-2 text-2xl font-black">登録データのメンテナンス</h2><p className="mt-3 text-sm leading-6 text-stone-400">不足している情報を確認し、Google Mapsの新規取得やAIスープ分類レビューで補完します。</p><div className="mt-5 grid gap-3 sm:grid-cols-3"><MetricCard label="Google評価未登録" value={metrics.missingRating} /><MetricCard label="公式サイト未登録" value={metrics.missingWebsite} /><MetricCard label="写真未登録" value={metrics.missingPhoto} /></div></div></section>}
+
+    {activeMenu === "hyakumeiten" && <section className="mt-8"><TabelogAwardsImport /></section>}
   </main>;
 }
