@@ -55,11 +55,21 @@ const TOKYO_AREAS = [
 // advertise themselves as tsukemen or abura soba.  Keep each query area-specific
 // to preserve Tokyo-wide coverage while providing enough distinct candidates for
 // the 5,000-shop import target.
-export const TOKYO_SEARCH_QUERIES = [...new Set(TOKYO_AREAS.flatMap((query) => [
+const TOKYO_CORE_SEARCH_QUERIES = TOKYO_AREAS.flatMap((query) => [
   query,
   query.replace("ラーメン", "つけ麺"),
   query.replace("ラーメン", "油そば"),
-]))];
+]);
+
+// The first 23 entries are Tokyo's special wards. Add commonly independent
+// ramen terms there to find stores that do not use the word "ラーメン".
+const TOKYO_WARD_VARIANT_QUERIES = TOKYO_AREAS.slice(0, 23).flatMap((query) => [
+  query.replace("ラーメン", "中華そば"),
+  query.replace("ラーメン", "担々麺"),
+  query.replace("ラーメン", "家系ラーメン"),
+]);
+
+export const TOKYO_SEARCH_QUERIES = [...new Set([...TOKYO_CORE_SEARCH_QUERIES, ...TOKYO_WARD_VARIANT_QUERIES])];
 
 const fieldMask = [
   "places.id",
