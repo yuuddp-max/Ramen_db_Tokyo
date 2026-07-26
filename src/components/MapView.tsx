@@ -7,10 +7,10 @@ declare global {
   interface Window { google?: { maps: any }; }
 }
 
-type MapBounds = { north: number; south: number; east: number; west: number };
-type Props = { shops: RamenShop[]; selected?: RamenShop; currentLocation?: { latitude: number; longitude: number } | null; onShopSelect?: (shop: RamenShop) => void; onBoundsChange?: (bounds: MapBounds) => void; className?: string };
+export type MapShop = Pick<RamenShop, "id" | "name" | "latitude" | "longitude" | "rating" | "user_ratings_total">;
+type Props = { shops: MapShop[]; selected?: MapShop; currentLocation?: { latitude: number; longitude: number } | null; onShopSelect?: (shop: MapShop) => void; className?: string };
 
-export function MapView({ shops, selected, currentLocation, onShopSelect, onBoundsChange, className = "" }: Props) {
+export function MapView({ shops, selected, currentLocation, onShopSelect, className = "" }: Props) {
   const mapElement = useRef<HTMLDivElement>(null);
   const lastCenter = useRef<{ lat: number; lng: number } | null>(null);
   const lastCurrentLocationKey = useRef<string | null>(null);
@@ -32,54 +32,45 @@ export function MapView({ shops, selected, currentLocation, onShopSelect, onBoun
       });
       lastCurrentLocationKey.current = currentLocationKey;
       const infoWindow = new googleMaps.InfoWindow();
-      const boundsListener = map.addListener("idle", () => {
-        const bounds = map.getBounds?.();
-        if (!bounds) return;
-        const northEast = bounds.getNorthEast();
-        const southWest = bounds.getSouthWest();
-        onBoundsChange?.({ north: northEast.lat(), east: northEast.lng(), south: southWest.lat(), west: southWest.lng() });
+      const shopsById = new Map(shops.map((shop) => [shop.id, shop]));
+
+      // The Data layer handles thousands of points more efficiently than one
+      // Marker instance per shop, while preserving click-through to details.
+      map.data.addGeoJson({ type: "FeatureCollection", features: shops.map((shop) => ({ type: "Feature", properties: { shopId: shop.id }, geometry: { type: "Point", coordinates: [shop.longitude, shop.latitude] } })) });
+      map.data.setStyle({ icon: { path: googleMaps.SymbolPath.CIRCLE, scale: 5, fillColor: "#e4ad42", fillOpacity: 0.9, strokeColor: "#111111", strokeWeight: 1.5 } });
+      const shopClickListener = map.data.addListener("click", (event: any) => {
+        const shop = shopsById.get(String(event.feature.getProperty("shopId")));
+        if (!shop) return;
+        onShopSelect?.(shop);
+        const content = document.createElement("div");
+        content.className = "min-w-[180px] p-1 text-slate-900";
+        const name = document.createElement("p");
+        name.className = "font-bold";
+        name.textContent = shop.name;
+        const rating = document.createElement("p");
+        rating.className = "mt-1 text-sm";
+        rating.textContent = `★ ${shop.rating?.toFixed(1) ?? "–"} （${shop.user_ratings_total?.toLocaleString() ?? 0}件）`;
+        const link = document.createElement("a");
+        link.href = `/shops/${shop.id}`;
+        link.className = "mt-2 inline-block text-sm font-bold text-amber-700 underline";
+        link.textContent = "店舗詳細を見る";
+        content.append(name, rating, link);
+        infoWindow.setContent(content);
+        infoWindow.setPosition(event.latLng);
+        infoWindow.open({ map });
       });
-      const markers = shops.map((shop) => {
-        const marker = new googleMaps.Marker({
-          position: { lat: shop.latitude, lng: shop.longitude }, map, title: shop.name,
-        });
-        marker.addListener("click", () => {
-          onShopSelect?.(shop);
-          const content = document.createElement("div");
-          content.className = "min-w-[180px] p-1 text-slate-900";
-          const name = document.createElement("p");
-          name.className = "font-bold";
-          name.textContent = shop.name;
-          const rating = document.createElement("p");
-          rating.className = "mt-1 text-sm";
-          rating.textContent = `★ ${shop.rating?.toFixed(1) ?? "–"} （${shop.user_ratings_total?.toLocaleString() ?? 0}件）`;
-          const link = document.createElement("a");
-          link.href = `/shops/${shop.id}`;
-          link.className = "mt-2 inline-block text-sm font-bold text-amber-700 underline";
-          link.textContent = "店舗詳細を見る";
-          content.append(name, rating, link);
-          infoWindow.setContent(content);
-          infoWindow.open({ map, anchor: marker });
-        });
-        return marker;
-      });
-      if (currentLocation) {
-        markers.push(new googleMaps.Marker({
-          position: { lat: currentLocation.latitude, lng: currentLocation.longitude },
-          map,
-          title: "現在地",
-          zIndex: 10,
-          icon: {
-            path: googleMaps.SymbolPath.CIRCLE,
-            scale: 8,
-            fillColor: "#e4ad42",
-            fillOpacity: 1,
-            strokeColor: "#111111",
-            strokeWeight: 2,
-          },
-        }));
-      }
-      destroyMap = () => { const center = map.getCenter?.(); if (center) lastCenter.current = { lat: center.lat(), lng: center.lng() }; googleMaps.event.removeListener(boundsListener); infoWindow.close(); markers.forEach((marker: any) => marker.setMap(null)); };
+      const currentLocationMarker = currentLocation ? new googleMaps.Marker({
+        position: { lat: currentLocation.latitude, lng: currentLocation.longitude }, map, title: "現在地", zIndex: 10,
+        icon: { path: googleMaps.SymbolPath.CIRCLE, scale: 8, fillColor: "#e4ad42", fillOpacity: 1, strokeColor: "#111111", strokeWeight: 2 },
+      }) : null;
+      destroyMap = () => {
+        const center = map.getCenter?.();
+        if (center) lastCenter.current = { lat: center.lat(), lng: center.lng() };
+        googleMaps.event.removeListener(shopClickListener);
+        map.data.forEach((feature: any) => map.data.remove(feature));
+        infoWindow.close();
+        currentLocationMarker?.setMap(null);
+      };
     };
 
     if (window.google?.maps) { initialise(); return () => destroyMap?.(); }
@@ -95,7 +86,7 @@ export function MapView({ shops, selected, currentLocation, onShopSelect, onBoun
     script.onload = initialise;
     document.head.appendChild(script);
     return () => { script.onload = null; destroyMap?.(); };
-  }, [shops, selected, currentLocation, onShopSelect, onBoundsChange]);
+  }, [shops, selected, currentLocation, onShopSelect]);
 
   if (!process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY) {
     return <div className={`map-grid grid place-items-center text-center text-sm text-stone-400 ${className}`}><p>Google Maps APIキーを設定すると<br />地図を表示できます。</p></div>;

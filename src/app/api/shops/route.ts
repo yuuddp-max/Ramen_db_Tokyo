@@ -84,5 +84,15 @@ export async function GET(request: NextRequest) {
       .eq("match_status", "matched");
     awardedShopIds = new Set((awards ?? []).map((award) => award.shop_id));
   }
-  return NextResponse.json({ shops: pageShops.map((shop) => ({ ...shop, has_tabelog_hyakumeiten: awardedShopIds.has(shop.id) })), total: matchingShops.length });
+  // The list is paginated, while the map must receive every shop matching the
+  // current condition. Keep the map payload deliberately small.
+  const mapShops = matchingShops.map((shop) => ({
+    id: shop.id,
+    name: shop.name,
+    latitude: shop.latitude,
+    longitude: shop.longitude,
+    rating: shop.rating,
+    user_ratings_total: shop.user_ratings_total,
+  }));
+  return NextResponse.json({ shops: pageShops.map((shop) => ({ ...shop, has_tabelog_hyakumeiten: awardedShopIds.has(shop.id) })), mapShops, total: matchingShops.length });
 }
