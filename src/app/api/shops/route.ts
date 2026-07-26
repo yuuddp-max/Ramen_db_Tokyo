@@ -24,6 +24,8 @@ export async function GET(request: NextRequest) {
   const latitude = rawLatitude === null ? Number.NaN : Number(rawLatitude);
   const longitude = rawLongitude === null ? Number.NaN : Number(rawLongitude);
   const hasLocation = Number.isFinite(latitude) && Number.isFinite(longitude) && Math.abs(latitude) <= 90 && Math.abs(longitude) <= 180;
+  const requestedRadius = Number(params.get("radiusMeters"));
+  const radiusMeters = hasLocation && Number.isFinite(requestedRadius) && requestedRadius > 0 ? Math.min(requestedRadius, 20_000) : null;
   const rawNorth = params.get("north"); const rawSouth = params.get("south"); const rawEast = params.get("east"); const rawWest = params.get("west");
   const north = rawNorth === null ? Number.NaN : Number(rawNorth); const south = rawSouth === null ? Number.NaN : Number(rawSouth); const east = rawEast === null ? Number.NaN : Number(rawEast); const west = rawWest === null ? Number.NaN : Number(rawWest);
   const hasBounds = [north, south, east, west].every(Number.isFinite) && north >= south && east >= west;
@@ -71,7 +73,8 @@ export async function GET(request: NextRequest) {
     const normalizedQuery = normalizeShopText(query);
     const textMatches = !normalizedQuery || normalizeShopText(shop.name).includes(normalizedQuery) || normalizeShopText(shop.address).includes(normalizedQuery) || normalizeShopText(shop.nearest_station).includes(normalizedQuery);
     const stationMatches = stationLocation ? calculateDistanceMeters(stationLocation.latitude, stationLocation.longitude, shop.latitude, shop.longitude) <= 2_000 : false;
-    return (!openNow || getCurrentOpenStatus(shop.opening_hours).open) && matchesRamenTaxonomy(shop.name, soup, style) && (stationSearch ? stationMatches || textMatches : textMatches);
+    const withinRadius = radiusMeters === null || calculateDistanceMeters(latitude, longitude, shop.latitude, shop.longitude) <= radiusMeters;
+    return withinRadius && (!openNow || getCurrentOpenStatus(shop.opening_hours).open) && matchesRamenTaxonomy(shop.name, soup, style) && (stationSearch ? stationMatches || textMatches : textMatches);
   });
   if (sort === "distance") matchingShops.sort((a, b) => calculateDistanceMeters(latitude, longitude, a.latitude, a.longitude) - calculateDistanceMeters(latitude, longitude, b.latitude, b.longitude));
   const pageShops = matchingShops.slice(offset, offset + limit);
