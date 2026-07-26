@@ -13,6 +13,7 @@ type Props = { shops: RamenShop[]; selected?: RamenShop; currentLocation?: { lat
 export function MapView({ shops, selected, currentLocation, onShopSelect, onBoundsChange, className = "" }: Props) {
   const mapElement = useRef<HTMLDivElement>(null);
   const lastCenter = useRef<{ lat: number; lng: number } | null>(null);
+  const lastCurrentLocationKey = useRef<string | null>(null);
 
   useEffect(() => {
     const key = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
@@ -22,11 +23,14 @@ export function MapView({ shops, selected, currentLocation, onShopSelect, onBoun
     const initialise = () => {
       const googleMaps = window.google?.maps;
       if (!googleMaps || !mapElement.current) return;
-      const focus = lastCenter.current ?? selected ?? (currentLocation ? { latitude: currentLocation.latitude, longitude: currentLocation.longitude } : shops[0]);
+      const currentLocationKey = currentLocation ? `${currentLocation.latitude.toFixed(5)},${currentLocation.longitude.toFixed(5)}` : null;
+      const hasNewCurrentLocation = currentLocationKey !== null && currentLocationKey !== lastCurrentLocationKey.current;
+      const focus = hasNewCurrentLocation ? { latitude: currentLocation!.latitude, longitude: currentLocation!.longitude } : lastCenter.current ?? selected ?? (currentLocation ? { latitude: currentLocation.latitude, longitude: currentLocation.longitude } : shops[0]);
       const map = new googleMaps.Map(mapElement.current, {
         center: "lat" in focus ? { lat: focus.lat, lng: focus.lng } : focus ? { lat: focus.latitude, lng: focus.longitude } : { lat: 35.6762, lng: 139.6503 },
-        zoom: selected ? 15 : currentLocation ? 13 : 11,
+        zoom: selected || hasNewCurrentLocation ? 16 : currentLocation ? 14 : 11,
       });
+      lastCurrentLocationKey.current = currentLocationKey;
       const infoWindow = new googleMaps.InfoWindow();
       const boundsListener = map.addListener("idle", () => {
         const bounds = map.getBounds?.();
