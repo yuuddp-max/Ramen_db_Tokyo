@@ -81,6 +81,17 @@ Windows PowerShellでは `$RESEARCH_API_SECRET` を `$env:RESEARCH_API_SECRET` �
 
 `RESEARCH_ADMIN_PASSWORD` もProduction環境変数へ設定すると、[`/admin/research`](/admin/research) で下書きの根拠URL・分類・信頼度を確認できます。画面から1店または10店を手動調査、承認、却下も行えます。ログイン状態は8時間で失効し、管理用パスワード・OpenAI APIキー・サービスロールキーはいずれもブラウザに送信されません。
 
+### 食べログ百名店CSVの取込
+
+利用権を確認したご自身のCSVだけを対象に、[`supabase/20260726_tabelog_hyakumeiten_awards.sql`](./supabase/20260726_tabelog_hyakumeiten_awards.sql) をSupabase SQL Editorで一度実行してから、`/admin/research` の「百名店の一括取込」を使います。CSVのヘッダーは次のとおりです。`selection_date` は任意です。
+
+```csv
+award_year,listed_name,source_url,selection_date
+2024,店舗名,https://award.tabelog.com/hyakumeiten/ramen_tokyo/2024/,2024-12-03
+```
+
+取込時に既存のGoogle Places店舗名へ自動照合します。一致しない店舗・同名候補が複数ある店舗も保存され、`match_status` で後から確認できます。
+
 ## Google Places API (New) 設定
 
 1. Google Cloud でプロジェクトと Billing を有効にします。
