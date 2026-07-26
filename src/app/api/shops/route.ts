@@ -3,12 +3,14 @@ import { supabase, supabaseAdmin } from "@/lib/supabase";
 import { calculateDistanceMeters, getCurrentOpenStatus } from "@/lib/utils";
 import { matchesRamenTaxonomy } from "@/lib/ramen-genres";
 import { dedupeRamenShops } from "@/lib/shop-deduplication";
+import { searchTokyoLocation } from "@/lib/google-places";
 import type { RamenShop } from "@/types/ramen";
 
 export async function GET(request: NextRequest) {
   if (!supabase) return NextResponse.json({ shops: [], total: 0, message: "Supabase is not configured." });
   const params = request.nextUrl.searchParams;
   const query = params.get("q")?.trim() ?? "";
+  const stationSearch = query.endsWith("駅");
   const genre = params.get("genre")?.trim() ?? "";
   const soup = params.get("soup")?.trim() ?? "";
   const style = params.get("style")?.trim() ?? "";
@@ -28,7 +30,7 @@ export async function GET(request: NextRequest) {
   const limit = Math.min(Math.max(Number(params.get("limit")) || 60, 1), 100);
   const offset = Math.max(Number(params.get("offset")) || 0, 0);
   let builder = supabase.from("ramen_shops").select("*");
-  if (query) builder = builder.or(`name.ilike.%${query}%,address.ilike.%${query}%`);
+  if (query && !stationSearch) builder = builder.or(`name.ilike.%${query}%,address.ilike.%${query}%,nearest_station.ilike.%${query}%`);
   if (genre) builder = builder.contains("genres", [genre]);
   if (minRating !== null) builder = builder.gte("rating", minRating);
   if (price) {
@@ -54,9 +56,12 @@ export async function GET(request: NextRequest) {
   // Read the import cap and deduplicate before applying pagination so pages and totals stay stable.
   const { data, error } = await builder.range(0, 2999);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  const matchingShops = dedupeRamenShops((data ?? []) as RamenShop[]).filter((shop) =>
-    (!openNow || getCurrentOpenStatus(shop.opening_hours).open) && matchesRamenTaxonomy(shop.name, soup, style),
-  );
+  const stationLocation = stationSearch ? await searchTokyoLocation(query) : null;
+  const matchingShops = dedupeRamenShops((data ?? []) as RamenShop[]).filter((shop) => {
+    const textMatches = !query || shop.name.includes(query) || (shop.address ?? "").includes(query) || (shop.nearest_station ?? "").includes(query);
+    const stationMatches = stationLocation ? calculateDistanceMeters(stationLocation.latitude, stationLocation.longitude, shop.latitude, shop.longitude) <= 2_000 : false;
+    return (!openNow || getCurrentOpenStatus(shop.opening_hours).open) && matchesRamenTaxonomy(shop.name, soup, style) && (stationSearch ? stationMatches || textMatches : textMatches);
+  });
   if (sort === "distance") matchingShops.sort((a, b) => calculateDistanceMeters(latitude, longitude, a.latitude, a.longitude) - calculateDistanceMeters(latitude, longitude, b.latitude, b.longitude));
   const pageShops = matchingShops.slice(offset, offset + limit);
   let awardedShopIds = new Set<string>();

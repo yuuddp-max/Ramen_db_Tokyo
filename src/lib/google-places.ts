@@ -153,6 +153,23 @@ async function searchTokyoRamenPage(query: string, pageToken?: string) {
   };
 }
 
+/** Resolves a station/area query to a map point without exposing the API key. */
+export async function searchTokyoLocation(query: string) {
+  const apiKey = process.env.GOOGLE_PLACES_API_KEY;
+  if (!apiKey) return null;
+  const response = await fetch("https://places.googleapis.com/v1/places:searchText", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "X-Goog-Api-Key": apiKey, "X-Goog-FieldMask": "places.location" },
+    body: JSON.stringify({ textQuery: query, languageCode: "ja", regionCode: "JP", pageSize: 1 }),
+    cache: "no-store",
+  });
+  if (!response.ok) return null;
+  const place = ((await response.json()) as TextSearchResponse).places?.[0];
+  const latitude = place?.location?.latitude;
+  const longitude = place?.location?.longitude;
+  return latitude != null && longitude != null ? { latitude, longitude } : null;
+}
+
 export async function searchTokyoRamen(query = "ラーメン 東京") {
   return (await searchTokyoRamenPage(query)).shops;
 }
