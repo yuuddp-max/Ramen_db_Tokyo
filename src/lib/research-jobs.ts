@@ -1,4 +1,4 @@
-import { researchSoup } from "@/lib/soup-research";
+import { researchSoup, researchSoupFromOfficialWebsite } from "@/lib/soup-research";
 import { supabaseAdmin } from "@/lib/supabase";
 
 type Result = { placeId: string; name: string; status: "draft" | "failed"; error?: string };
@@ -20,7 +20,8 @@ export async function runSoupResearch(limit = 10) {
     while (nextIndex < shops.length) {
       const shop = shops[nextIndex++];
       try {
-        const research = await researchSoup(shop);
+        // Higher-rated stores are selected first. Use their official site before paying for Web search.
+        const research = await researchSoupFromOfficialWebsite(shop) ?? await researchSoup(shop);
         const { error: updateError } = await admin.from("ramen_shops").update({
           researched_soup_type: research.soupType, researched_style: research.style, research_confidence: research.confidence,
           research_evidence_url: research.evidenceUrl, research_evidence_summary: research.evidenceSummary,
