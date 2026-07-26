@@ -1,6 +1,6 @@
 # TOKYO RAMEN GUIDE
 
-東京全域のラーメン店を検索する Next.js 15 アプリケーションです。Google Places API (New) から店舗情報を取得し、Supabase に Place ID 単位で重複なく保存します。
+東京全域のラーメン店を検索する Next.js 15 アプリケーションです。Google Places API (New) から店舗情報を取得し、Supabase に Place ID 単位で重複なく保存します。標準取込は5,000店を上限とし、既存データを更新しません。
 
 ## 機能
 

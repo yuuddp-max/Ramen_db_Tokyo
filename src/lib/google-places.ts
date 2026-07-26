@@ -36,7 +36,7 @@ export type ImportedShop = {
   photo_attributions: { displayName?: string; uri?: string; photoUri?: string }[] | null;
 };
 
-export const TOKYO_SEARCH_QUERIES = [
+const TOKYO_AREAS = [
   "ラーメン 千代田区", "ラーメン 中央区", "ラーメン 港区", "ラーメン 新宿区", "ラーメン 文京区",
   "ラーメン 台東区", "ラーメン 墨田区", "ラーメン 江東区", "ラーメン 品川区", "ラーメン 目黒区",
   "ラーメン 大田区", "ラーメン 世田谷区", "ラーメン 渋谷区", "ラーメン 中野区", "ラーメン 杉並区",
@@ -50,6 +50,16 @@ export const TOKYO_SEARCH_QUERIES = [
   "ラーメン 檜原村", "ラーメン 奥多摩町", "ラーメン 大島町", "ラーメン 八丈町", "ラーメン 利島村",
   "ラーメン 新島村", "ラーメン 神津島村", "ラーメン 三宅村", "ラーメン 御蔵島村", "ラーメン 青ヶ島村", "ラーメン 小笠原村",
 ];
+
+// A single "ラーメン" query is capped by Places and misses shops that primarily
+// advertise themselves as tsukemen or abura soba.  Keep each query area-specific
+// to preserve Tokyo-wide coverage while providing enough distinct candidates for
+// the 5,000-shop import target.
+export const TOKYO_SEARCH_QUERIES = [...new Set(TOKYO_AREAS.flatMap((query) => [
+  query,
+  query.replace("ラーメン", "つけ麺"),
+  query.replace("ラーメン", "油そば"),
+]))];
 
 const fieldMask = [
   "places.id",
@@ -74,6 +84,9 @@ function toShop(place: GooglePlace): ImportedShop | null {
   const longitude = place.location?.longitude;
   const name = place.displayName?.text;
   if (!place.id || !name || latitude == null || longitude == null) return null;
+  // Low-rated records are not useful directory entries. Leave unrated places
+  // untouched here; only an explicit rating of 1.0 or below is excluded.
+  if (place.rating != null && place.rating <= 1) return null;
 
   return {
     place_id: place.id,
