@@ -41,6 +41,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ imported: inserted?.length ?? 0, skippedExisting: shops.length - newShops.length, total: count ?? 0, target, placeIds: inserted?.map((shop) => shop.place_id) ?? [] });
   } catch (error) {
     console.error("Ramen import failed", error);
-    return NextResponse.json({ error: error instanceof Error ? error.message : "Import failed" }, { status: 500 });
+    const message = error instanceof Error ? error.message : typeof error === "object" && error !== null ? JSON.stringify(error) : "Import failed";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
