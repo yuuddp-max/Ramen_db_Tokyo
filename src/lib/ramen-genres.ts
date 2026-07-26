@@ -29,11 +29,8 @@ export const RAMEN_STYLES: RamenGenreOption[] = [
   { label: "淡麗系", keywords: ["淡麗"] },
   { label: "濃厚系", keywords: ["濃厚"] },
   { label: "背脂系", keywords: ["背脂"] },
-  { label: "泡系", keywords: ["泡系", "泡ラーメン"] },
   { label: "昆布水つけ麺", keywords: ["昆布水"] },
   { label: "冷やしラーメン", keywords: ["冷やし"] },
-  { label: "創作系", keywords: ["創作"] },
-  { label: "ご当地ラーメン", keywords: ["ご当地", "札幌", "博多", "喜多方", "尾道", "徳島", "和歌山", "熊本", "長浜", "佐野", "白河", "富山"] },
 ];
 
 function findGenre(name: string, options: RamenGenreOption[]) {
