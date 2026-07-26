@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { searchAllTokyoRamen, searchTokyoRamen } from "@/lib/google-places";
+import { searchAllTokyoRamen, searchTokyoRamen, TOKYO_SEARCH_QUERIES } from "@/lib/google-places";
 import { supabaseAdmin } from "@/lib/supabase";
 
 export const runtime = "nodejs";
@@ -19,13 +19,15 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json().catch(() => ({}));
     const target = Math.min(Math.max(Number(body.target) || 5_000, 1), 5_000);
+    const queryOffset = Math.min(Math.max(Number(body.queryOffset) || 0, 0), TOKYO_SEARCH_QUERIES.length);
+    const queryLimit = Math.min(Math.max(Number(body.queryLimit) || TOKYO_SEARCH_QUERIES.length, 1), 25);
     const { count: currentTotal, error: countError } = await supabaseAdmin.from("ramen_shops").select("id", { count: "exact", head: true });
     if (countError) throw countError;
     const remaining = Math.max(target - (currentTotal ?? 0), 0);
     if (remaining === 0) return NextResponse.json({ imported: 0, total: currentTotal ?? 0, target, message: "The target has already been reached. Existing shops were not changed." });
     const shops = typeof body.query === "string"
       ? await searchTokyoRamen(body.query)
-      : await searchAllTokyoRamen(undefined, 5_000);
+      : await searchAllTokyoRamen(TOKYO_SEARCH_QUERIES.slice(queryOffset, queryOffset + queryLimit), 5_000);
     if (!shops.length) return NextResponse.json({ imported: 0, message: "No shops returned by Places API." });
     const existingPlaceIds = new Set<string>();
     for (const placeIds of chunks(shops.map((shop) => shop.place_id), 500)) {
@@ -38,7 +40,7 @@ export async function POST(request: NextRequest) {
     const { data: inserted, error } = await supabaseAdmin.from("ramen_shops").insert(newShops).select("place_id");
     if (error) throw error;
     const { count } = await supabaseAdmin.from("ramen_shops").select("id", { count: "exact", head: true });
-    return NextResponse.json({ imported: inserted?.length ?? 0, skippedExisting: shops.length - newShops.length, total: count ?? 0, target, placeIds: inserted?.map((shop) => shop.place_id) ?? [] });
+    return NextResponse.json({ imported: inserted?.length ?? 0, skippedExisting: shops.length - newShops.length, total: count ?? 0, target, queryOffset, queryLimit, nextQueryOffset: Math.min(queryOffset + queryLimit, TOKYO_SEARCH_QUERIES.length), hasMoreQueries: queryOffset + queryLimit < TOKYO_SEARCH_QUERIES.length });
   } catch (error) {
     console.error("Ramen import failed", error);
     const message = error instanceof Error ? error.message : typeof error === "object" && error !== null ? JSON.stringify(error) : "Import failed";
