@@ -57,7 +57,12 @@ export async function GET(request: NextRequest) {
       : builder.order("rating", { ascending: false, nullsFirst: false });
   // Import results can contain different Place IDs for one physical storefront.
   // Read the import cap and deduplicate before applying pagination so pages and totals stay stable.
-  const resultPages = await Promise.all(Array.from({ length: 6 }, (_, index) => builder.range(index * 1000, index * 1000 + 999)));
+  // Supabase's query builder is mutable. Execute ranges one at a time so each
+  // request keeps its own Range header instead of every request using the last page.
+  const resultPages = [];
+  for (let index = 0; index < 6; index += 1) {
+    resultPages.push(await builder.range(index * 1000, index * 1000 + 999));
+  }
   const error = resultPages.find((result) => result.error)?.error;
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   const data = resultPages.flatMap((result) => result.data ?? []);
