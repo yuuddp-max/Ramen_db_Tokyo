@@ -1,8 +1,9 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { RamenShop } from "@/types/ramen";
-import { MapView, type MapShop } from "./MapView";
+import type { MapShop } from "./MapView";
 import { ShopCard } from "./ShopCard";
 import { readFavoriteIds } from "@/lib/favorites";
 import { calculateDistanceMeters } from "@/lib/utils";
@@ -12,6 +13,10 @@ import { RAMEN_SOUPS, RAMEN_STYLES } from "@/lib/ramen-genres";
 type Props = { initialShops: RamenShop[]; initialTotal: number };
 const PAGE_SIZE = 12;
 const MAP_RADIUS_METERS = 5_000;
+const LazyMapView = dynamic(() => import("./MapView").then((module) => module.MapView), {
+  ssr: false,
+  loading: () => <div className="h-[360px] animate-pulse rounded-2xl border border-white/10 bg-white/5 sm:h-[460px]" aria-label="地図を読み込み中" />,
+});
 
 export function SearchExperience({ initialShops, initialTotal }: Props) {
   const [query, setQuery] = useState("");
@@ -20,7 +25,8 @@ export function SearchExperience({ initialShops, initialTotal }: Props) {
   const [style, setStyle] = useState("");
   const [minRating, setMinRating] = useState("");
   const [shops, setShops] = useState(initialShops);
-  const [mapShops, setMapShops] = useState<MapShop[]>(initialShops);
+  const [mapShops, setMapShops] = useState<MapShop[]>([]);
+  const [mapVisible, setMapVisible] = useState(false);
   const [total, setTotal] = useState(initialTotal);
   const [page, setPage] = useState(1);
   const [initializedFromUrl, setInitializedFromUrl] = useState(false);
@@ -107,6 +113,7 @@ export function SearchExperience({ initialShops, initialTotal }: Props) {
       setSearchError("");
       try {
         const params = new URLSearchParams({ q: query, genre, soup, style, minRating, sort, limit: String(PAGE_SIZE), offset: String((page - 1) * PAGE_SIZE), latitude: String(userLocation.latitude), longitude: String(userLocation.longitude), radiusMeters: String(MAP_RADIUS_METERS) });
+        if (mapVisible) params.set("includeMap", "true");
         if (favoriteOnly) params.set("ids", favoriteIdsKey);
         if (recentOnly) params.set("ids", recentIdsKey);
         if (openOnly) params.set("openNow", "true");
@@ -119,7 +126,7 @@ export function SearchExperience({ initialShops, initialTotal }: Props) {
       } finally { if (isCurrent) setLoading(false); }
     }, 0);
     return () => { isCurrent = false; clearTimeout(timer); controller.abort(); };
-  }, [query, genre, soup, style, minRating, sort, favoriteOnly, favoriteIdsKey, recentOnly, recentIdsKey, openOnly, page, initializedFromUrl, userLocation]);
+  }, [query, genre, soup, style, minRating, sort, favoriteOnly, favoriteIdsKey, recentOnly, recentIdsKey, openOnly, page, initializedFromUrl, userLocation, mapVisible]);
 
   useEffect(() => {
     if (!initializedFromUrl) return;
@@ -157,7 +164,7 @@ export function SearchExperience({ initialShops, initialTotal }: Props) {
       <div className="panel mt-8 rounded-2xl p-3"><div className="flex flex-col gap-3 sm:flex-row"><label className="flex flex-1 items-center gap-3 rounded-xl bg-black/40 px-4 py-3"><span className="text-gold">⌕</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="店名、駅名、エリアで検索" className="w-full bg-transparent text-sm outline-none placeholder:text-stone-600" /></label><span className="rounded-xl bg-white/10 px-4 py-3 text-sm text-stone-300">口コミ数順</span></div><div className="mt-3 flex flex-wrap gap-2" aria-label="評価の絞り込み"><select value={minRating} onChange={(event) => setMinRating(event.target.value)} className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs font-bold text-stone-300 outline-none"><option value="">評価：すべて</option><option value="4">評価 4.0 以上</option><option value="4.5">評価 4.5 以上</option></select></div><div className="mt-4 space-y-3" aria-label="ラーメンジャンル検索"><div><p className="mb-1.5 text-xs font-bold tracking-[.12em] text-gold">スープ系統</p><div className="flex gap-2 overflow-x-auto pb-1"><button onClick={() => setSoup("")} className={`shrink-0 rounded-full border px-3 py-1.5 text-xs font-bold transition ${!soup ? "border-gold bg-gold text-ink" : "border-white/10 bg-white/5 text-stone-400 hover:border-gold/60 hover:text-gold"}`}>すべて</button>{RAMEN_SOUPS.map((item) => <button key={item.label} onClick={() => setSoup(item.label)} className={`shrink-0 rounded-full border px-3 py-1.5 text-xs font-bold transition ${soup === item.label ? "border-gold bg-gold text-ink" : "border-white/10 bg-white/5 text-stone-400 hover:border-gold/60 hover:text-gold"}`}>{item.label}</button>)}</div></div><div><p className="mb-1.5 text-xs font-bold tracking-[.12em] text-gold">スタイル</p><div className="flex gap-2 overflow-x-auto pb-1"><button onClick={() => setStyle("")} className={`shrink-0 rounded-full border px-3 py-1.5 text-xs font-bold transition ${!style ? "border-gold bg-gold text-ink" : "border-white/10 bg-white/5 text-stone-400 hover:border-gold/60 hover:text-gold"}`}>すべて</button>{RAMEN_STYLES.map((item) => <button key={item.label} onClick={() => setStyle(item.label)} className={`shrink-0 rounded-full border px-3 py-1.5 text-xs font-bold transition ${style === item.label ? "border-gold bg-gold text-ink" : "border-white/10 bg-white/5 text-stone-400 hover:border-gold/60 hover:text-gold"}`}>{item.label}</button>)}</div></div></div></div>
     </div></section>
     <section className="mx-auto max-w-7xl px-5 py-8 sm:px-8"><div className="mb-5 flex flex-wrap items-end justify-between gap-4"><div><p className="text-sm text-stone-400">{filteredLabel}</p><p className="mt-1 text-xl font-bold">{displayTotal.toLocaleString()} <span className="text-sm font-normal text-stone-500">shops found</span></p>{displayTotal > 0 && <p className="mt-1 text-xs text-stone-500">{visibleStart.toLocaleString()}〜{visibleEnd.toLocaleString()}件を表示</p>}</div><div className="flex flex-wrap items-center justify-end gap-2">{hasActiveFilters && <button onClick={clearFilters} className="px-2 py-2 text-xs text-stone-500 hover:text-gold">条件をクリア</button>}<button onClick={() => setOpenOnly((current) => !current)} className={`rounded-xl border px-3 py-2 text-sm font-bold transition ${openOnly ? "border-emerald-400 bg-emerald-400 text-ink" : "border-white/10 text-stone-400 hover:border-emerald-400 hover:text-emerald-400"}`}>営業中のみ</button><button onClick={() => { setRecentOnly((current) => !current); setFavoriteOnly(false); }} className={`rounded-xl border px-3 py-2 text-sm font-bold transition ${recentOnly ? "border-gold bg-gold text-ink" : "border-white/10 text-stone-400 hover:border-gold hover:text-gold"}`}>◷ 履歴</button><button onClick={() => { setFavoriteOnly((current) => !current); setRecentOnly(false); }} className={`rounded-xl border px-3 py-2 text-sm font-bold transition ${favoriteOnly ? "border-ramen bg-ramen text-white" : "border-white/10 text-stone-400 hover:border-gold hover:text-gold"}`}>♡ お気に入り</button></div></div>{locationMessage && <p className="mb-4 text-xs text-stone-500">{locationMessage}</p>}
-      {searchError && <p role="alert" className="mb-4 rounded-xl border border-ramen/40 bg-ramen/10 px-4 py-3 text-sm text-stone-200">{searchError}</p>}<p className="mb-4 text-xs text-stone-500">{userLocation ? `現在地から半径5km以内の ${nearbyMapShops.length.toLocaleString()} 店を地図に表示` : "現在地を取得すると、半径5km以内の店舗を地図に表示します"}</p><div className="space-y-3"><MapView shops={nearbyMapShops} currentLocation={userLocation} radiusMeters={MAP_RADIUS_METERS} focusCurrentLocationToken={mapResetRevision} onShopSelect={selectShopFromMap} className="h-[360px] overflow-hidden rounded-2xl border border-white/10 sm:h-[460px]" /><div className="flex justify-center"><button onClick={() => requestLocation(true)} className="rounded-xl border border-white/15 px-5 py-2.5 text-sm font-bold text-stone-300 transition hover:border-gold hover:text-gold">◎ 現在地</button></div><div>{renderList()}</div></div>
+      {searchError && <p role="alert" className="mb-4 rounded-xl border border-ramen/40 bg-ramen/10 px-4 py-3 text-sm text-stone-200">{searchError}</p>}<div className="space-y-4"><div>{mapVisible ? <><p className="mb-4 text-xs text-stone-500">{userLocation ? `現在地から半径5km以内の ${nearbyMapShops.length.toLocaleString()} 店を地図に表示` : "現在地を取得すると、半径5km以内の店舗を地図に表示します"}</p><LazyMapView shops={nearbyMapShops} currentLocation={userLocation} radiusMeters={MAP_RADIUS_METERS} focusCurrentLocationToken={mapResetRevision} onShopSelect={selectShopFromMap} className="h-[360px] overflow-hidden rounded-2xl border border-white/10 sm:h-[460px]" /><div className="mt-3 flex justify-center gap-2"><button onClick={() => requestLocation(true)} className="rounded-xl border border-white/15 px-5 py-2.5 text-sm font-bold text-stone-300 transition hover:border-gold hover:text-gold">◎ 現在地</button><button onClick={() => { setMapVisible(false); setMapShops([]); }} className="rounded-xl border border-white/15 px-5 py-2.5 text-sm font-bold text-stone-400 transition hover:border-gold hover:text-gold">地図を閉じる</button></div></> : <div className="panel flex flex-col items-center gap-3 rounded-2xl px-5 py-7 text-center"><p className="text-sm text-stone-400">店舗リストを優先して表示しています。</p><button onClick={() => setMapVisible(true)} className="rounded-xl border border-gold/70 px-5 py-2.5 text-sm font-bold text-gold transition hover:bg-gold hover:text-ink">地図を表示</button></div>}</div><div>{renderList()}</div></div>
     </section>
   </>;
 }

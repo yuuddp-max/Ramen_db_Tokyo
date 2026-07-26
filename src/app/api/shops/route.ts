@@ -19,6 +19,7 @@ export async function GET(request: NextRequest) {
   const price = params.get("price")?.trim() ?? "";
   const rawIds = params.get("ids");
   const openNow = params.get("openNow") === "true";
+  const includeMap = params.get("includeMap") === "true";
   const rawLatitude = params.get("latitude");
   const rawLongitude = params.get("longitude");
   const latitude = rawLatitude === null ? Number.NaN : Number(rawLatitude);
@@ -36,6 +37,17 @@ export async function GET(request: NextRequest) {
   const offset = Math.max(Number(params.get("offset")) || 0, 0);
   let builder = supabase.from("ramen_shops").select("*");
   if (hasBounds) builder = builder.gte("latitude", south).lte("latitude", north).gte("longitude", west).lte("longitude", east);
+  // Narrow the database read to a bounding box first. The precise circular
+  // radius check below still removes the four corner areas of this box.
+  if (radiusMeters !== null) {
+    const latitudeDelta = radiusMeters / 111_320;
+    const longitudeDelta = radiusMeters / (111_320 * Math.max(Math.cos((latitude * Math.PI) / 180), 0.01));
+    builder = builder
+      .gte("latitude", latitude - latitudeDelta)
+      .lte("latitude", latitude + latitudeDelta)
+      .gte("longitude", longitude - longitudeDelta)
+      .lte("longitude", longitude + longitudeDelta);
+  }
   if (genre) builder = builder.contains("genres", [genre]);
   if (minRating !== null) builder = builder.gte("rating", minRating);
   if (price) {
@@ -87,13 +99,13 @@ export async function GET(request: NextRequest) {
       .eq("match_status", "matched");
     awardedShopIds = new Set((awards ?? []).map((award) => award.shop_id));
   }
-  const mapShops = matchingShops.map((shop) => ({
+  const mapShops = includeMap ? matchingShops.map((shop) => ({
     id: shop.id,
     name: shop.name,
     latitude: shop.latitude,
     longitude: shop.longitude,
     rating: shop.rating,
     user_ratings_total: shop.user_ratings_total,
-  }));
+  })) : [];
   return NextResponse.json({ shops: pageShops.map((shop) => ({ ...shop, has_tabelog_hyakumeiten: awardedShopIds.has(shop.id) })), mapShops, total: matchingShops.length });
 }
