@@ -1,6 +1,6 @@
 import { SearchExperience } from "@/components/SearchExperience";
 import Link from "next/link";
-import { supabase } from "@/lib/supabase";
+import { supabase, supabaseAdmin } from "@/lib/supabase";
 import type { RamenShop } from "@/types/ramen";
 import { dedupeRamenShops } from "@/lib/shop-deduplication";
 
@@ -15,6 +15,15 @@ export default async function Home() {
       supabase.from("ramen_shops").select("id", { count: "exact", head: true }),
     ]);
     shops = dedupeRamenShops((data as RamenShop[] | null) ?? []).slice(0, 12); total = count ?? 0;
+    if (supabaseAdmin && shops.length) {
+      const { data: awards } = await supabaseAdmin
+        .from("tabelog_hyakumeiten_awards")
+        .select("shop_id")
+        .in("shop_id", shops.map((shop) => shop.id))
+        .eq("match_status", "matched");
+      const awardedShopIds = new Set((awards ?? []).map((award) => award.shop_id));
+      shops = shops.map((shop) => ({ ...shop, has_tabelog_hyakumeiten: awardedShopIds.has(shop.id) }));
+    }
   }
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://ramen-db-tokyo-blush.vercel.app";
   const structuredData = {

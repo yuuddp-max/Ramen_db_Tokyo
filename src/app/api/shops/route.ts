@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { supabase } from "@/lib/supabase";
+import { supabase, supabaseAdmin } from "@/lib/supabase";
 import { calculateDistanceMeters, getCurrentOpenStatus } from "@/lib/utils";
 import { matchesRamenTaxonomy } from "@/lib/ramen-genres";
 import { dedupeRamenShops } from "@/lib/shop-deduplication";
@@ -58,5 +58,15 @@ export async function GET(request: NextRequest) {
     (!openNow || getCurrentOpenStatus(shop.opening_hours).open) && matchesRamenTaxonomy(shop.name, soup, style),
   );
   if (sort === "distance") matchingShops.sort((a, b) => calculateDistanceMeters(latitude, longitude, a.latitude, a.longitude) - calculateDistanceMeters(latitude, longitude, b.latitude, b.longitude));
-  return NextResponse.json({ shops: matchingShops.slice(offset, offset + limit), total: matchingShops.length });
+  const pageShops = matchingShops.slice(offset, offset + limit);
+  let awardedShopIds = new Set<string>();
+  if (supabaseAdmin && pageShops.length) {
+    const { data: awards } = await supabaseAdmin
+      .from("tabelog_hyakumeiten_awards")
+      .select("shop_id")
+      .in("shop_id", pageShops.map((shop) => shop.id))
+      .eq("match_status", "matched");
+    awardedShopIds = new Set((awards ?? []).map((award) => award.shop_id));
+  }
+  return NextResponse.json({ shops: pageShops.map((shop) => ({ ...shop, has_tabelog_hyakumeiten: awardedShopIds.has(shop.id) })), total: matchingShops.length });
 }
