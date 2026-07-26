@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { TabelogAwardsImport } from "@/components/TabelogAwardsImport";
 
 const SOUP_TYPES = ["醤油", "塩", "味噌", "豚骨", "豚骨醤油", "鶏白湯", "魚介", "煮干し", "貝出汁", "海老", "牛骨", "担々麺", "カレー", "その他", "複数"];
-const STYLES = ["東京中華そば", "家系", "二郎系", "二郎インスパイア", "大勝軒系", "つけ麺", "油そば", "まぜそば", "淡麗系", "濃厚系", "背脂系", "泡系", "昆布水つけ麺", "冷やしラーメン", "創作系", "ご当地ラーメン", "その他"];
+const STYLES = ["東京中華そば", "家系", "二郎系", "二郎インスパイア", "大勝軒系", "つけ麺", "油そば", "まぜそば", "淡麗系", "濃厚系", "背脂系", "昆布水つけ麺", "冷やしラーメン", "その他"];
 
 type Draft = {
   place_id: string;
