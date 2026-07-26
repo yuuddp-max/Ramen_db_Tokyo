@@ -8,9 +8,9 @@ declare global {
 }
 
 export type MapShop = Pick<RamenShop, "id" | "name" | "latitude" | "longitude" | "rating" | "user_ratings_total">;
-type Props = { shops: MapShop[]; selected?: MapShop; currentLocation?: { latitude: number; longitude: number } | null; onShopSelect?: (shop: MapShop) => void; className?: string };
+type Props = { shops: MapShop[]; selected?: MapShop; currentLocation?: { latitude: number; longitude: number } | null; radiusMeters?: number; onShopSelect?: (shop: MapShop) => void; className?: string };
 
-export function MapView({ shops, selected, currentLocation, onShopSelect, className = "" }: Props) {
+export function MapView({ shops, selected, currentLocation, radiusMeters, onShopSelect, className = "" }: Props) {
   const mapElement = useRef<HTMLDivElement>(null);
   const lastCenter = useRef<{ lat: number; lng: number } | null>(null);
   const lastCurrentLocationKey = useRef<string | null>(null);
@@ -63,6 +63,16 @@ export function MapView({ shops, selected, currentLocation, onShopSelect, classN
         position: { lat: currentLocation.latitude, lng: currentLocation.longitude }, map, title: "現在地", zIndex: 10,
         icon: { path: googleMaps.SymbolPath.CIRCLE, scale: 8, fillColor: "#e4ad42", fillOpacity: 1, strokeColor: "#111111", strokeWeight: 2 },
       }) : null;
+      const radiusCircle = currentLocation && radiusMeters ? new googleMaps.Circle({
+        center: { lat: currentLocation.latitude, lng: currentLocation.longitude },
+        radius: radiusMeters,
+        map,
+        fillColor: "#e4ad42",
+        fillOpacity: 0.08,
+        strokeColor: "#e4ad42",
+        strokeOpacity: 0.75,
+        strokeWeight: 1.5,
+      }) : null;
       destroyMap = () => {
         const center = map.getCenter?.();
         if (center) lastCenter.current = { lat: center.lat(), lng: center.lng() };
@@ -70,6 +80,7 @@ export function MapView({ shops, selected, currentLocation, onShopSelect, classN
         map.data.forEach((feature: any) => map.data.remove(feature));
         infoWindow.close();
         currentLocationMarker?.setMap(null);
+        radiusCircle?.setMap(null);
       };
     };
 
@@ -86,7 +97,7 @@ export function MapView({ shops, selected, currentLocation, onShopSelect, classN
     script.onload = initialise;
     document.head.appendChild(script);
     return () => { script.onload = null; destroyMap?.(); };
-  }, [shops, selected, currentLocation, onShopSelect]);
+  }, [shops, selected, currentLocation, radiusMeters, onShopSelect]);
 
   if (!process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY) {
     return <div className={`map-grid grid place-items-center text-center text-sm text-stone-400 ${className}`}><p>Google Maps APIキーを設定すると<br />地図を表示できます。</p></div>;
