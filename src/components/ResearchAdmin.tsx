@@ -21,32 +21,45 @@ type Draft = {
   research_updated_at: string | null;
 };
 
+type Metrics = { total: number; pending: number; draft: number; approved: number; rejected: number; missingRating: number; missingWebsite: number; missingPhoto: number };
 type ManualClassification = { soupType: string; style: string };
+type MenuKey = "research" | "google" | "summary" | "maintenance";
+
+const MENUS: { key: MenuKey; label: string; description: string }[] = [
+  { key: "research", label: "AIスープ分類レビュー", description: "AIの分類結果を確認・手動補正して承認します。" },
+  { key: "google", label: "Google Maps 新規データ取得", description: "Google Mapsで検索し、未登録の店舗だけを追加します。" },
+  { key: "summary", label: "登録済みデータ 集計", description: "登録数・AI調査の進捗を集計します。" },
+  { key: "maintenance", label: "登録済みデータ メンテナンス", description: "不足データを確認し、百名店CSVなどの補足情報を管理します。" },
+];
 
 function isUnconfirmed(value: string | null) {
   return !value || value === "未確認";
 }
 
-export function ResearchAdmin({ authenticated, drafts }: { authenticated: boolean; drafts: Draft[] }) {
+function MetricCard({ label, value, tone = "text-white" }: { label: string; value: number; tone?: string }) {
+  return <div className="rounded-xl border border-white/10 bg-black/20 p-4"><p className="text-xs text-stone-500">{label}</p><p className={`mt-1 text-2xl font-black ${tone}`}>{value.toLocaleString()}<span className="ml-1 text-sm font-normal text-stone-500">店</span></p></div>;
+}
+
+export function ResearchAdmin({ authenticated, drafts, metrics }: { authenticated: boolean; drafts: Draft[]; metrics: Metrics }) {
   const router = useRouter();
   const [password, setPassword] = useState("");
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
+  const [activeMenu, setActiveMenu] = useState<MenuKey>("research");
+  const [googleQuery, setGoogleQuery] = useState("ラーメン 東京");
   const [manualClassifications, setManualClassifications] = useState<Record<string, ManualClassification>>({});
 
   const request = async (url: string, options: RequestInit = {}) => {
     setBusy(true);
     setMessage("");
     try {
-      const response = await fetch(url, {
-        ...options,
-        headers: { "Content-Type": "application/json", ...(options.headers ?? {}) },
-      });
+      const response = await fetch(url, { ...options, headers: { "Content-Type": "application/json", ...(options.headers ?? {}) } });
       const data = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(data.error ?? "処理に失敗しました。");
       const failures = Array.isArray(data.results) ? data.results.filter((result: { status?: string }) => result.status === "failed") : [];
       const failureDetails = failures.map((result: { name?: string; error?: string }) => `${result.name ?? "店舗"}: ${result.error ?? "調査に失敗しました。"}`).join(" / ");
-      setMessage(data.researched != null ? `${data.researched}店を下書きとして作成しました。${failureDetails ? ` 失敗: ${failureDetails}` : ""}` : "保存しました。承認前に内容を確認してください。");
+      const importMessage = data.imported != null ? `${data.imported}店を新規登録しました。${data.skippedExisting ? ` 登録済みは${data.skippedExisting}店スキップしました。` : ""}` : null;
+      setMessage(importMessage ?? (data.researched != null ? `${data.researched}店を下書きとして作成しました。${failureDetails ? ` 失敗: ${failureDetails}` : ""}` : (data.message ?? "保存しました。承認前に内容を確認してください。")));
       router.refresh();
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "処理に失敗しました。");
@@ -58,10 +71,7 @@ export function ResearchAdmin({ authenticated, drafts }: { authenticated: boolea
   const updateManualClassification = (placeId: string, field: keyof ManualClassification, value: string) => {
     setManualClassifications((current) => {
       const existing = current[placeId] ?? { soupType: "", style: "" };
-      return {
-        ...current,
-        [placeId]: field === "soupType" ? { ...existing, soupType: value } : { ...existing, style: value },
-      };
+      return { ...current, [placeId]: field === "soupType" ? { ...existing, soupType: value } : { ...existing, style: value } };
     });
   };
 
@@ -74,33 +84,27 @@ export function ResearchAdmin({ authenticated, drafts }: { authenticated: boolea
   };
 
   if (!authenticated) {
-    return <main className="mx-auto max-w-md px-5 py-20"><div className="panel rounded-2xl p-6"><p className="text-xs font-bold tracking-[.2em] text-gold">ADMIN</p><h1 className="mt-2 text-2xl font-black">AI調査レビュー</h1><p className="mt-3 text-sm leading-6 text-stone-400">管理者パスワードでログインしてください。</p><form className="mt-6 space-y-3" onSubmit={(event) => { event.preventDefault(); request("/api/research/admin/session", { method: "POST", body: JSON.stringify({ password }) }); }}><input type="password" value={password} onChange={(event) => setPassword(event.target.value)} className="w-full rounded-xl border border-white/10 bg-black/30 px-4 py-3 outline-none focus:border-gold" placeholder="管理者パスワード" required /><button disabled={busy} className="w-full rounded-xl bg-gold px-4 py-3 font-bold text-ink disabled:opacity-50">ログイン</button></form>{message && <p className="mt-4 text-sm text-gold">{message}</p>}</div></main>;
+    return <main className="mx-auto max-w-md px-5 py-20"><div className="panel rounded-2xl p-6"><p className="text-xs font-bold tracking-[.2em] text-gold">ADMIN</p><h1 className="mt-2 text-2xl font-black">管理画面</h1><p className="mt-3 text-sm leading-6 text-stone-400">管理者パスワードでログインしてください。</p><form className="mt-6 space-y-3" onSubmit={(event) => { event.preventDefault(); request("/api/research/admin/session", { method: "POST", body: JSON.stringify({ password }) }); }}><input type="password" value={password} onChange={(event) => setPassword(event.target.value)} className="w-full rounded-xl border border-white/10 bg-black/30 px-4 py-3 outline-none focus:border-gold" placeholder="管理者パスワード" required /><button disabled={busy} className="w-full rounded-xl bg-gold px-4 py-3 font-bold text-ink disabled:opacity-50">ログイン</button></form>{message && <p className="mt-4 text-sm text-gold">{message}</p>}</div></main>;
   }
 
-  return <main className="mx-auto max-w-5xl px-5 py-10 sm:px-8">
-    <div className="flex flex-wrap items-end justify-between gap-4">
-      <div><p className="text-xs font-bold tracking-[.2em] text-gold">ADMIN · HUMAN REVIEW</p><h1 className="mt-2 text-3xl font-black">AIスープ分類レビュー</h1><p className="mt-2 text-sm text-stone-400">評価点・口コミ数が高い店舗から、公式サイトを優先して低コストで調査します。</p></div>
-      <div className="flex flex-wrap gap-2"><button disabled={busy} onClick={() => request("/api/research/admin/run", { method: "POST" })} className="rounded-xl border border-gold px-4 py-2 text-sm font-bold text-gold disabled:opacity-50">AI調査を1店実行</button><button disabled={busy} onClick={() => request("/api/research/admin/run", { method: "POST", body: JSON.stringify({ limit: 10 }) })} className="rounded-xl bg-gold px-4 py-2 text-sm font-bold text-ink disabled:opacity-50">AI調査を10店実行</button><button disabled={busy} onClick={() => request("/api/research/admin/session", { method: "DELETE" })} className="rounded-xl border border-white/15 px-4 py-2 text-sm text-stone-400">ログアウト</button></div>
-    </div>
-    <TabelogAwardsImport />
+  const active = MENUS.find((menu) => menu.key === activeMenu)!;
+  return <main className="mx-auto max-w-6xl px-5 py-10 sm:px-8">
+    <div className="flex flex-wrap items-end justify-between gap-4"><div><p className="text-xs font-bold tracking-[.2em] text-gold">ADMIN · RAMEN DATABASE</p><h1 className="mt-2 text-3xl font-black">管理画面</h1><p className="mt-2 text-sm text-stone-400">{active.description}</p></div><button disabled={busy} onClick={() => request("/api/research/admin/session", { method: "DELETE" })} className="rounded-xl border border-white/15 px-4 py-2 text-sm text-stone-400 disabled:opacity-50">ログアウト</button></div>
+
+    <nav className="mt-8 grid gap-2 sm:grid-cols-2 lg:grid-cols-4" aria-label="管理メニュー">{MENUS.map((menu) => <button key={menu.key} onClick={() => { setActiveMenu(menu.key); setMessage(""); }} className={`rounded-xl border px-4 py-3 text-left text-sm font-bold transition ${activeMenu === menu.key ? "border-gold bg-gold text-ink" : "border-white/10 bg-white/5 text-stone-300 hover:border-gold/60 hover:text-gold"}`}>{menu.label}</button>)}</nav>
     {message && <p className="mt-5 rounded-xl border border-gold/40 bg-gold/10 px-4 py-3 text-sm text-gold">{message}</p>}
-    <section className="mt-8 space-y-4">
-      {drafts.length ? drafts.map((shop) => {
-        const needsManualSelection = isUnconfirmed(shop.researched_soup_type) || isUnconfirmed(shop.researched_style);
-        const selection = manualClassifications[shop.place_id];
-        const canSaveManualSelection = (isUnconfirmed(shop.researched_soup_type) && Boolean(selection?.soupType)) || (isUnconfirmed(shop.researched_style) && Boolean(selection?.style));
-        return <article key={shop.place_id} className="panel rounded-2xl p-5">
-          <div className="flex flex-col justify-between gap-4 sm:flex-row">
-            <div className="min-w-0"><h2 className="text-lg font-bold">{shop.name}</h2><p className="mt-1 text-sm text-stone-400">{shop.address}</p>
-              <div className="mt-3 flex flex-wrap gap-2 text-sm"><span className="rounded bg-white/5 px-2 py-1 font-bold text-gold">★ Google {shop.rating?.toFixed(1) ?? "–"}</span><span className="rounded bg-white/5 px-2 py-1 text-stone-300">口コミ {shop.user_ratings_total?.toLocaleString() ?? "–"}件</span></div>
-              <div className="mt-4 flex flex-wrap gap-2 text-sm"><span className="rounded bg-gold/10 px-2 py-1 font-bold text-gold">{shop.researched_soup_type ?? "未確認"}</span><span className="rounded bg-ramen/10 px-2 py-1 font-bold text-ramen">{shop.researched_style ?? "未確認"}</span><span className="rounded bg-white/5 px-2 py-1 text-stone-400">信頼度 {shop.research_confidence ?? "-"}</span></div>
-              {needsManualSelection && <div className="mt-4 rounded-xl border border-gold/30 bg-black/20 p-4"><p className="text-sm font-bold text-gold">未確認の項目を手動で分類</p><p className="mt-1 text-xs text-stone-400">保存後も下書きのままです。内容を確認してから承認してください。</p><div className="mt-3 flex flex-wrap gap-2">{isUnconfirmed(shop.researched_soup_type) && <label className="text-sm text-stone-300">スープ系統<select value={selection?.soupType ?? ""} onChange={(event) => updateManualClassification(shop.place_id, "soupType", event.target.value)} className="mt-1 block min-w-40 rounded-lg border border-white/15 bg-black px-3 py-2 text-sm text-white"><option value="">選択してください</option>{SOUP_TYPES.map((type) => <option key={type} value={type}>{type}</option>)}</select></label>}{isUnconfirmed(shop.researched_style) && <label className="text-sm text-stone-300">スタイル<select value={selection?.style ?? ""} onChange={(event) => updateManualClassification(shop.place_id, "style", event.target.value)} className="mt-1 block min-w-40 rounded-lg border border-white/15 bg-black px-3 py-2 text-sm text-white"><option value="">選択してください</option>{STYLES.map((style) => <option key={style} value={style}>{style}</option>)}</select></label>}</div><button disabled={busy || !canSaveManualSelection} onClick={() => saveManualClassification(shop)} className="mt-3 rounded-lg border border-gold px-3 py-2 text-sm font-bold text-gold disabled:opacity-50">手動分類を保存</button></div>}
-              <p className="mt-4 max-w-2xl text-sm leading-6 text-stone-300">{shop.research_evidence_summary}</p>{shop.research_evidence_url && <a href={shop.research_evidence_url} target="_blank" rel="noreferrer" className="mt-3 inline-block text-sm font-bold text-gold underline underline-offset-4">根拠を確認 ↗</a>}
-            </div>
-            <div className="flex shrink-0 items-start gap-2"><button disabled={busy} onClick={() => request("/api/research/soup/approve", { method: "POST", body: JSON.stringify({ placeIds: [shop.place_id] }) })} className="rounded-xl bg-emerald-400 px-4 py-2 text-sm font-bold text-ink disabled:opacity-50">承認</button><button disabled={busy} onClick={() => request("/api/research/admin/reject", { method: "POST", body: JSON.stringify({ placeId: shop.place_id }) })} className="rounded-xl border border-white/15 px-4 py-2 text-sm text-stone-400 disabled:opacity-50">却下</button></div>
-          </div>
-        </article>;
-      }) : <div className="panel rounded-2xl px-6 py-16 text-center text-stone-400">確認待ちの下書きはありません。</div>}
-    </section>
+
+    {activeMenu === "research" && <section className="mt-8"><div className="flex flex-wrap gap-2"><button disabled={busy} onClick={() => request("/api/research/admin/run", { method: "POST" })} className="rounded-xl border border-gold px-4 py-2 text-sm font-bold text-gold disabled:opacity-50">AI調査を1店実行</button><button disabled={busy} onClick={() => request("/api/research/admin/run", { method: "POST", body: JSON.stringify({ limit: 10 }) })} className="rounded-xl bg-gold px-4 py-2 text-sm font-bold text-ink disabled:opacity-50">AI調査を10店実行</button></div><div className="mt-5 space-y-4">{drafts.length ? drafts.map((shop) => {
+      const needsManualSelection = isUnconfirmed(shop.researched_soup_type) || isUnconfirmed(shop.researched_style);
+      const selection = manualClassifications[shop.place_id];
+      const canSaveManualSelection = (isUnconfirmed(shop.researched_soup_type) && Boolean(selection?.soupType)) || (isUnconfirmed(shop.researched_style) && Boolean(selection?.style));
+      return <article key={shop.place_id} className="panel rounded-2xl p-5"><div className="flex flex-col justify-between gap-4 sm:flex-row"><div className="min-w-0"><h2 className="text-lg font-bold">{shop.name}</h2><p className="mt-1 text-sm text-stone-400">{shop.address}</p><div className="mt-3 flex flex-wrap gap-2 text-sm"><span className="rounded bg-white/5 px-2 py-1 font-bold text-gold">★ Google {shop.rating?.toFixed(1) ?? "–"}</span><span className="rounded bg-white/5 px-2 py-1 text-stone-300">口コミ {shop.user_ratings_total?.toLocaleString() ?? "–"}件</span></div><div className="mt-4 flex flex-wrap gap-2 text-sm"><span className="rounded bg-gold/10 px-2 py-1 font-bold text-gold">{shop.researched_soup_type ?? "未確認"}</span><span className="rounded bg-ramen/10 px-2 py-1 font-bold text-ramen">{shop.researched_style ?? "未確認"}</span><span className="rounded bg-white/5 px-2 py-1 text-stone-400">信頼度 {shop.research_confidence ?? "-"}</span></div>{needsManualSelection && <div className="mt-4 rounded-xl border border-gold/30 bg-black/20 p-4"><p className="text-sm font-bold text-gold">未確認の項目を手動で分類</p><p className="mt-1 text-xs text-stone-400">保存後も下書きのままです。内容を確認してから承認してください。</p><div className="mt-3 flex flex-wrap gap-2">{isUnconfirmed(shop.researched_soup_type) && <label className="text-sm text-stone-300">スープ系統<select value={selection?.soupType ?? ""} onChange={(event) => updateManualClassification(shop.place_id, "soupType", event.target.value)} className="mt-1 block min-w-40 rounded-lg border border-white/15 bg-black px-3 py-2 text-sm text-white"><option value="">選択してください</option>{SOUP_TYPES.map((type) => <option key={type} value={type}>{type}</option>)}</select></label>}{isUnconfirmed(shop.researched_style) && <label className="text-sm text-stone-300">スタイル<select value={selection?.style ?? ""} onChange={(event) => updateManualClassification(shop.place_id, "style", event.target.value)} className="mt-1 block min-w-40 rounded-lg border border-white/15 bg-black px-3 py-2 text-sm text-white"><option value="">選択してください</option>{STYLES.map((style) => <option key={style} value={style}>{style}</option>)}</select></label>}</div><button disabled={busy || !canSaveManualSelection} onClick={() => saveManualClassification(shop)} className="mt-3 rounded-lg border border-gold px-3 py-2 text-sm font-bold text-gold disabled:opacity-50">手動分類を保存</button></div>}<p className="mt-4 max-w-2xl text-sm leading-6 text-stone-300">{shop.research_evidence_summary}</p>{shop.research_evidence_url && <a href={shop.research_evidence_url} target="_blank" rel="noreferrer" className="mt-3 inline-block text-sm font-bold text-gold underline underline-offset-4">根拠を確認 ↗</a>}</div><div className="flex shrink-0 items-start gap-2"><button disabled={busy} onClick={() => request("/api/research/soup/approve", { method: "POST", body: JSON.stringify({ placeIds: [shop.place_id] }) })} className="rounded-xl bg-emerald-400 px-4 py-2 text-sm font-bold text-ink disabled:opacity-50">承認</button><button disabled={busy} onClick={() => request("/api/research/admin/reject", { method: "POST", body: JSON.stringify({ placeId: shop.place_id }) })} className="rounded-xl border border-white/15 px-4 py-2 text-sm text-stone-400 disabled:opacity-50">却下</button></div></div></article>;
+    }) : <div className="panel rounded-2xl px-6 py-16 text-center text-stone-400">確認待ちの下書きはありません。</div>}</div></section>}
+
+    {activeMenu === "google" && <section className="panel mt-8 rounded-2xl p-6"><p className="text-xs font-bold tracking-[.2em] text-gold">GOOGLE MAPS</p><h2 className="mt-2 text-2xl font-black">新規店舗を取得</h2><p className="mt-3 max-w-2xl text-sm leading-6 text-stone-400">検索結果から、Google Place IDが未登録の店舗だけを追加します。Google Places APIの利用料金が発生する場合があります。</p><label className="mt-5 block max-w-xl text-sm font-bold text-stone-300">検索語<input value={googleQuery} onChange={(event) => setGoogleQuery(event.target.value)} className="mt-2 block w-full rounded-xl border border-white/10 bg-black/30 px-4 py-3 outline-none focus:border-gold" placeholder="例: ラーメン 渋谷区" /></label><button disabled={busy || googleQuery.trim().length < 2} onClick={() => request("/api/research/admin/google-import", { method: "POST", body: JSON.stringify({ query: googleQuery }) })} className="mt-4 rounded-xl bg-gold px-4 py-3 text-sm font-bold text-ink disabled:opacity-50">Google Mapsから検索・登録</button></section>}
+
+    {activeMenu === "summary" && <section className="mt-8"><div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4"><MetricCard label="登録店舗" value={metrics.total} tone="text-gold" /><MetricCard label="AI調査待ち" value={metrics.pending} /><MetricCard label="レビュー待ち" value={metrics.draft} tone="text-ramen" /><MetricCard label="承認済み" value={metrics.approved} tone="text-emerald-400" /><MetricCard label="却下" value={metrics.rejected} /><MetricCard label="Google評価未登録" value={metrics.missingRating} /><MetricCard label="公式サイト未登録" value={metrics.missingWebsite} /><MetricCard label="写真未登録" value={metrics.missingPhoto} /></div></section>}
+
+    {activeMenu === "maintenance" && <section className="mt-8 space-y-5"><div className="panel rounded-2xl p-6"><p className="text-xs font-bold tracking-[.2em] text-gold">DATA HEALTH</p><h2 className="mt-2 text-2xl font-black">登録データのメンテナンス</h2><p className="mt-3 text-sm leading-6 text-stone-400">不足している情報を確認し、Google Mapsの新規取得やAIスープ分類レビューで補完します。</p><div className="mt-5 grid gap-3 sm:grid-cols-3"><MetricCard label="Google評価未登録" value={metrics.missingRating} /><MetricCard label="公式サイト未登録" value={metrics.missingWebsite} /><MetricCard label="写真未登録" value={metrics.missingPhoto} /></div></div><TabelogAwardsImport /></section>}
   </main>;
 }

@@ -20,7 +20,6 @@ export async function POST(request: NextRequest) {
   if (style && !STYLES.includes(style)) return NextResponse.json({ error: "Invalid style." }, { status: 400 });
 
   const updates: Record<string, string> = {
-    research_confidence: "manual",
     research_updated_at: new Date().toISOString(),
   };
   if (soupType) updates.researched_soup_type = soupType;
