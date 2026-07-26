@@ -12,6 +12,16 @@ export type SoupResearch = {
 
 type ResearchInput = { name: string; address: string | null; website: string | null };
 
+type ResponsesApiPayload = {
+  status?: string;
+  error?: { message?: string };
+  incomplete_details?: { reason?: string } | null;
+  output?: Array<{
+    type?: string;
+    content?: Array<{ type?: string; text?: string }>;
+  }>;
+};
+
 const researchSchema = {
   type: "object",
   additionalProperties: false,
@@ -48,6 +58,13 @@ function validateResearch(value: unknown): SoupResearch {
   };
 }
 
+function getOutputText(payload: ResponsesApiPayload) {
+  return payload.output
+    ?.flatMap((item) => item.content ?? [])
+    .find((content) => content.type === "output_text")
+    ?.text;
+}
+
 export async function researchSoup(input: ResearchInput): Promise<SoupResearch> {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) throw new Error("OPENAI_API_KEY is not configured.");
@@ -73,8 +90,13 @@ export async function researchSoup(input: ResearchInput): Promise<SoupResearch> 
       text: { verbosity: "low", format: { type: "json_schema", name: "ramen_soup_research", strict: true, schema: researchSchema } },
     }),
   });
-  const payload = await response.json().catch(() => null) as { output_text?: string; error?: { message?: string } } | null;
+  const payload = await response.json().catch(() => null) as ResponsesApiPayload | null;
   if (!response.ok) throw new Error(payload?.error?.message || `OpenAI API request failed (${response.status}).`);
-  if (!payload?.output_text) throw new Error("OpenAI API returned no structured research result.");
-  try { return validateResearch(JSON.parse(payload.output_text)); } catch (error) { throw new Error(error instanceof Error ? error.message : "Could not parse AI research result."); }
+  if (!payload) throw new Error("OpenAI API returned an invalid response.");
+  const outputText = getOutputText(payload);
+  if (!outputText) {
+    const reason = payload.incomplete_details?.reason ? ` (${payload.incomplete_details.reason})` : "";
+    throw new Error(`OpenAI API returned no structured research result: ${payload.status ?? "unknown"}${reason}.`);
+  }
+  try { return validateResearch(JSON.parse(outputText)); } catch (error) { throw new Error(error instanceof Error ? error.message : "Could not parse AI research result."); }
 }
