@@ -78,7 +78,9 @@ export function SearchExperience({ initialShops, initialTotal }: Props) {
         setLocationMessage(resetMap ? "地図を現在地に戻しました" : "現在地から半径5kmの店舗を表示しています");
       },
       () => setLocationMessage("位置情報を取得できませんでした。ブラウザの許可設定を確認してください。"),
-      { enableHighAccuracy: false, timeout: 10_000, maximumAge: 300_000 },
+      // Avoid reusing a coarse IP/Wi-Fi position. Google Maps commonly refreshes
+      // location more aggressively, so request a fresh high-accuracy position too.
+      { enableHighAccuracy: true, timeout: 20_000, maximumAge: 0 },
     );
   }, []);
 
