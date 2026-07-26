@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { supabase, supabaseAdmin } from "@/lib/supabase";
 import { calculateDistanceMeters, getCurrentOpenStatus } from "@/lib/utils";
 import { matchesRamenTaxonomy } from "@/lib/ramen-genres";
-import { dedupeRamenShops } from "@/lib/shop-deduplication";
+import { dedupeRamenShops, normalizeShopText } from "@/lib/shop-deduplication";
 import { searchTokyoLocation } from "@/lib/google-places";
 import type { RamenShop } from "@/types/ramen";
 
@@ -32,7 +32,6 @@ export async function GET(request: NextRequest) {
   const limit = Math.min(Math.max(Number(params.get("limit")) || 60, 1), 100);
   const offset = Math.max(Number(params.get("offset")) || 0, 0);
   let builder = supabase.from("ramen_shops").select("*");
-  if (query && !stationSearch) builder = builder.or(`name.ilike.%${query}%,address.ilike.%${query}%`);
   if (hasBounds) builder = builder.gte("latitude", south).lte("latitude", north).gte("longitude", west).lte("longitude", east);
   if (genre) builder = builder.contains("genres", [genre]);
   if (minRating !== null) builder = builder.gte("rating", minRating);
@@ -57,11 +56,14 @@ export async function GET(request: NextRequest) {
       : builder.order("rating", { ascending: false, nullsFirst: false });
   // Import results can contain different Place IDs for one physical storefront.
   // Read the import cap and deduplicate before applying pagination so pages and totals stay stable.
-  const { data, error } = await builder.range(0, 2999);
+  const resultPages = await Promise.all(Array.from({ length: 6 }, (_, index) => builder.range(index * 1000, index * 1000 + 999)));
+  const error = resultPages.find((result) => result.error)?.error;
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  const data = resultPages.flatMap((result) => result.data ?? []);
   const stationLocation = stationSearch ? await searchTokyoLocation(query) : null;
   const matchingShops = dedupeRamenShops((data ?? []) as RamenShop[]).filter((shop) => {
-    const textMatches = !query || shop.name.includes(query) || (shop.address ?? "").includes(query) || (shop.nearest_station ?? "").includes(query);
+    const normalizedQuery = normalizeShopText(query);
+    const textMatches = !normalizedQuery || normalizeShopText(shop.name).includes(normalizedQuery) || normalizeShopText(shop.address).includes(normalizedQuery) || normalizeShopText(shop.nearest_station).includes(normalizedQuery);
     const stationMatches = stationLocation ? calculateDistanceMeters(stationLocation.latitude, stationLocation.longitude, shop.latitude, shop.longitude) <= 2_000 : false;
     return (!openNow || getCurrentOpenStatus(shop.opening_hours).open) && matchesRamenTaxonomy(shop.name, soup, style) && (stationSearch ? stationMatches || textMatches : textMatches);
   });
