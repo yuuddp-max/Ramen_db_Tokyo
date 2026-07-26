@@ -28,6 +28,8 @@ export type RamenShop = {
   research_evidence_url: string | null;
   research_evidence_summary: string | null;
   research_updated_at: string | null;
+  /** Server-side flag for whether the shop has a matched Tabelog Hyakumeiten award. */
+  has_tabelog_hyakumeiten?: boolean;
   created_at: string;
   updated_at: string;
 };
