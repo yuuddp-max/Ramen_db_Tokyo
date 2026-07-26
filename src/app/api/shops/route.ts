@@ -24,13 +24,16 @@ export async function GET(request: NextRequest) {
   const latitude = rawLatitude === null ? Number.NaN : Number(rawLatitude);
   const longitude = rawLongitude === null ? Number.NaN : Number(rawLongitude);
   const hasLocation = Number.isFinite(latitude) && Number.isFinite(longitude) && Math.abs(latitude) <= 90 && Math.abs(longitude) <= 180;
+  const north = Number(params.get("north")); const south = Number(params.get("south")); const east = Number(params.get("east")); const west = Number(params.get("west"));
+  const hasBounds = [north, south, east, west].every(Number.isFinite) && north >= south && east >= west;
   const ids = rawIds?.split(",").filter((id) => /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id)).slice(0, 100) ?? [];
   const sortValue = params.get("sort");
   const sort = sortValue === "newest" || sortValue === "reviews" || (sortValue === "distance" && hasLocation) ? sortValue : "rating";
   const limit = Math.min(Math.max(Number(params.get("limit")) || 60, 1), 100);
   const offset = Math.max(Number(params.get("offset")) || 0, 0);
   let builder = supabase.from("ramen_shops").select("*");
-  if (query && !stationSearch) builder = builder.or(`name.ilike.%${query}%,address.ilike.%${query}%,nearest_station.ilike.%${query}%`);
+  if (query && !stationSearch) builder = builder.or(`name.ilike.%${query}%,address.ilike.%${query}%`);
+  if (hasBounds) builder = builder.gte("latitude", south).lte("latitude", north).gte("longitude", west).lte("longitude", east);
   if (genre) builder = builder.contains("genres", [genre]);
   if (minRating !== null) builder = builder.gte("rating", minRating);
   if (price) {

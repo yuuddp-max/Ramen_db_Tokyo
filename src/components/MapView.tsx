@@ -12,6 +12,7 @@ type Props = { shops: RamenShop[]; selected?: RamenShop; currentLocation?: { lat
 
 export function MapView({ shops, selected, currentLocation, onShopSelect, onBoundsChange, className = "" }: Props) {
   const mapElement = useRef<HTMLDivElement>(null);
+  const lastCenter = useRef<{ lat: number; lng: number } | null>(null);
 
   useEffect(() => {
     const key = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
@@ -21,9 +22,9 @@ export function MapView({ shops, selected, currentLocation, onShopSelect, onBoun
     const initialise = () => {
       const googleMaps = window.google?.maps;
       if (!googleMaps || !mapElement.current) return;
-      const focus = selected ?? (currentLocation ? { latitude: currentLocation.latitude, longitude: currentLocation.longitude } : shops[0]);
+      const focus = lastCenter.current ?? selected ?? (currentLocation ? { latitude: currentLocation.latitude, longitude: currentLocation.longitude } : shops[0]);
       const map = new googleMaps.Map(mapElement.current, {
-        center: focus ? { lat: focus.latitude, lng: focus.longitude } : { lat: 35.6762, lng: 139.6503 },
+        center: "lat" in focus ? { lat: focus.lat, lng: focus.lng } : focus ? { lat: focus.latitude, lng: focus.longitude } : { lat: 35.6762, lng: 139.6503 },
         zoom: selected ? 15 : currentLocation ? 13 : 11,
       });
       const infoWindow = new googleMaps.InfoWindow();
@@ -74,7 +75,7 @@ export function MapView({ shops, selected, currentLocation, onShopSelect, onBoun
           },
         }));
       }
-      destroyMap = () => { googleMaps.event.removeListener(boundsListener); infoWindow.close(); markers.forEach((marker: any) => marker.setMap(null)); };
+      destroyMap = () => { const center = map.getCenter?.(); if (center) lastCenter.current = { lat: center.lat(), lng: center.lng() }; googleMaps.event.removeListener(boundsListener); infoWindow.close(); markers.forEach((marker: any) => marker.setMap(null)); };
     };
 
     if (window.google?.maps) { initialise(); return () => destroyMap?.(); }
