@@ -127,7 +127,7 @@ export function SearchExperience({ initialShops, initialTotal }: Props) {
       }
     }, 200);
     return () => { isCurrent = false; clearTimeout(timer); controller.abort(); };
-  }, [query, genre, soup, style, minRating, price, sort, favoriteOnly, favoriteIdsKey, recentOnly, recentIdsKey, openOnly, page, mapBounds, initializedFromUrl, locationSearchRevision]);
+  }, [query, genre, soup, style, minRating, price, sort, favoriteOnly, favoriteIdsKey, recentOnly, recentIdsKey, openOnly, page, mapBounds, initializedFromUrl, locationSearchRevision, userLocation]);
 
   useEffect(() => {
     if (!initializedFromUrl) return;

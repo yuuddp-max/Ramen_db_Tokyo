@@ -24,7 +24,8 @@ export async function GET(request: NextRequest) {
   const latitude = rawLatitude === null ? Number.NaN : Number(rawLatitude);
   const longitude = rawLongitude === null ? Number.NaN : Number(rawLongitude);
   const hasLocation = Number.isFinite(latitude) && Number.isFinite(longitude) && Math.abs(latitude) <= 90 && Math.abs(longitude) <= 180;
-  const north = Number(params.get("north")); const south = Number(params.get("south")); const east = Number(params.get("east")); const west = Number(params.get("west"));
+  const rawNorth = params.get("north"); const rawSouth = params.get("south"); const rawEast = params.get("east"); const rawWest = params.get("west");
+  const north = rawNorth === null ? Number.NaN : Number(rawNorth); const south = rawSouth === null ? Number.NaN : Number(rawSouth); const east = rawEast === null ? Number.NaN : Number(rawEast); const west = rawWest === null ? Number.NaN : Number(rawWest);
   const hasBounds = [north, south, east, west].every(Number.isFinite) && north >= south && east >= west;
   const ids = rawIds?.split(",").filter((id) => /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id)).slice(0, 100) ?? [];
   const sortValue = params.get("sort");
