@@ -26,3 +26,19 @@ for each row execute function public.set_updated_at();
 alter table public.tabelog_hyakumeiten_awards enable row level security;
 -- No browser-side policy: the protected admin importer uses SUPABASE_SERVICE_ROLE_KEY.
 
+-- 画面例「西永福の煮干箱」の確認済み選出歴。
+-- 根拠: https://award.tabelog.com/hyakumeiten/ramen_tokyo/2024/
+insert into public.tabelog_hyakumeiten_awards (
+  shop_id, award_year, award_name, area, listed_name, selection_date, source_url, match_status
+)
+select id, 2024, 'ラーメン TOKYO 百名店', '東京都', '西永福の煮干箱', '2024-12-03',
+  'https://award.tabelog.com/hyakumeiten/ramen_tokyo/2024/', 'matched'
+from public.ramen_shops
+where name = '西永福の煮干箱'
+  and address ilike '%杉並区永福3-55-3%'
+on conflict (award_name, award_year, area, listed_name) do update
+set shop_id = excluded.shop_id,
+  selection_date = excluded.selection_date,
+  source_url = excluded.source_url,
+  match_status = 'matched',
+  updated_at = now();

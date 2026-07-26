@@ -49,6 +49,10 @@ NEXT_PUBLIC_SITE_URL=https://your-domain.vercel.app
 
 写真は `GET /api/shop-photo` でサーバーが一時的な写真URLを取得して表示するため、`GOOGLE_PLACES_API_KEY` はブラウザに公開されません。Google Placesの写真取得と、`photos` フィールドを含む再取り込みは課金対象になり得るため、Google Cloudの予算アラートを設定してから実行してください。
 
+### 食べログ百名店の表示
+
+Supabase SQL Editorで [`supabase/20260726_tabelog_hyakumeiten_awards.sql`](./supabase/20260726_tabelog_hyakumeiten_awards.sql) を一度実行してください。このSQLは画面例「西永福の煮干箱」の2024年選出も初期登録します。管理画面の `/admin/research` から、利用権を確認したCSVを取り込めます。列は `award_year, listed_name, source_url, selection_date`（最終列は任意）です。店舗詳細では、自動一致した受賞レコードだけを「食べログ 百名店 2024」のようなバッジとして表示し、押すと根拠URLを開きます。
+
 ### AIによるスープ系統の調査（下書き→承認）
 
 1. Supabase SQL Editor で [`supabase/20260725_researched_soup_types.sql`](./supabase/20260725_researched_soup_types.sql) を一度実行します。今回の10店は公開済み（`approved`）、残りは未調査（`pending`）になります。
