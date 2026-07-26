@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
+import { isResearchAdminRequest, isResearchSecretRequest } from "@/lib/research-admin-auth";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function POST(request: NextRequest) {
-  const secret = request.headers.get("x-research-secret");
-  if (!process.env.RESEARCH_API_SECRET || secret !== process.env.RESEARCH_API_SECRET) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!isResearchSecretRequest(request) && !isResearchAdminRequest(request)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   if (!supabaseAdmin) return NextResponse.json({ error: "Supabase service role is not configured." }, { status: 500 });
   const body = await request.json().catch(() => ({}));
   const placeIds = Array.isArray(body.placeIds) ? body.placeIds.filter((value: unknown): value is string => typeof value === "string").slice(0, 20) : [];

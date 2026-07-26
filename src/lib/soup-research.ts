@@ -1,4 +1,5 @@
-const SOUP_TYPES = ["醤油", "塩", "味噌", "豚骨", "豚骨醤油", "鶏白湯", "煮干し", "魚介", "牛骨", "担々麺", "つけ麺", "油そば", "その他", "複数", "未確認"] as const;
+const SOUP_TYPES = ["醤油", "塩", "味噌", "豚骨", "豚骨醤油", "鶏白湯", "魚介", "煮干し", "貝出汁", "海老", "牛骨", "担々麺", "カレー", "その他", "複数", "未確認"] as const;
+const STYLES = ["東京中華そば", "家系", "二郎系", "二郎インスパイア", "大勝軒系", "つけ麺", "油そば", "まぜそば", "淡麗系", "濃厚系", "背脂系", "泡系", "昆布水つけ麺", "冷やしラーメン", "創作系", "ご当地ラーメン", "その他", "未確認"] as const;
 const CONFIDENCE = ["high", "medium", "low"] as const;
 
 export type SoupResearch = {
@@ -17,7 +18,7 @@ const researchSchema = {
   required: ["soupType", "style", "confidence", "evidenceUrl", "evidenceSummary"],
   properties: {
     soupType: { type: "string", enum: SOUP_TYPES },
-    style: { type: "string" },
+    style: { type: "string", enum: STYLES },
     confidence: { type: "string", enum: CONFIDENCE },
     evidenceUrl: { type: "string" },
     evidenceSummary: { type: "string" },
@@ -29,7 +30,7 @@ function validateResearch(value: unknown): SoupResearch {
   const record = value as Record<string, unknown>;
   if (
     typeof record.soupType !== "string" || !SOUP_TYPES.includes(record.soupType as SoupResearch["soupType"]) ||
-    typeof record.style !== "string" || record.style.length > 160 ||
+    typeof record.style !== "string" || !STYLES.includes(record.style as (typeof STYLES)[number]) ||
     typeof record.confidence !== "string" || !CONFIDENCE.includes(record.confidence as SoupResearch["confidence"]) ||
     typeof record.evidenceUrl !== "string" ||
     typeof record.evidenceSummary !== "string" || record.evidenceSummary.length > 280
@@ -51,10 +52,10 @@ export async function researchSoup(input: ResearchInput): Promise<SoupResearch> 
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) throw new Error("OPENAI_API_KEY is not configured.");
   const prompt = [
-    "東京都のラーメン店について、スープ系統を根拠付きで調査してください。",
-    "Web検索を使い、公式店舗サイト・公式メニュー・公式SNSを優先してください。",
+    "東京都のラーメン店について、簡易Web調査でスープ系統とスタイルを分類してください。",
+    "最初に公式店舗サイト・公式メニュー・公式SNSを確認し、見つからない場合だけ信頼できる紹介記事を1件確認してください。長い比較や追加調査はしません。",
     "憶測は禁止です。根拠が十分でなければ soupType を「未確認」、confidence を「low」にしてください。",
-    "分類は指定された選択肢だけを使います。複数の主力スープを確認できるときだけ「複数」にしてください。",
+    "スープ系統とスタイルは、指定された選択肢だけを使います。複数の主力スープを確認できるときだけ「複数」にしてください。",
     "evidenceUrl には、結論を確認できるHTTPSの直接URLを1つだけ入れてください。",
     "style と evidenceSummary は日本語で簡潔に書いてください。",
     `店名: ${input.name}`,
@@ -65,10 +66,11 @@ export async function researchSoup(input: ResearchInput): Promise<SoupResearch> 
     method: "POST",
     headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
     body: JSON.stringify({
-      model: process.env.OPENAI_RESEARCH_MODEL || "gpt-5.6-sol",
+      model: process.env.OPENAI_RESEARCH_MODEL || "gpt-5.6-luna",
       input: prompt,
-      tools: [{ type: "web_search_preview", search_context_size: "medium" }],
-      text: { format: { type: "json_schema", name: "ramen_soup_research", strict: true, schema: researchSchema } },
+      tools: [{ type: "web_search", search_context_size: "medium" }],
+      reasoning: { effort: "low" },
+      text: { verbosity: "low", format: { type: "json_schema", name: "ramen_soup_research", strict: true, schema: researchSchema } },
     }),
   });
   const payload = await response.json().catch(() => null) as { output_text?: string; error?: { message?: string } } | null;

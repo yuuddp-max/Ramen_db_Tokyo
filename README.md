@@ -53,14 +53,14 @@ NEXT_PUBLIC_SITE_URL=https://your-domain.vercel.app
 
 1. Supabase SQL Editor で [`supabase/20260725_researched_soup_types.sql`](./supabase/20260725_researched_soup_types.sql) を一度実行します。今回の10店は公開済み（`approved`）、残りは未調査（`pending`）になります。
 2. OpenAI Platform のAPIキーを `OPENAI_API_KEY`、呼び出し保護用の十分長いランダム文字列を `RESEARCH_API_SECRET` として、Vercelの **Production** 環境変数に設定します。どちらもブラウザには公開しません。
-3. 1回につき最大3店をAIがWeb検索し、根拠URLつきの結果をまず `draft` として保存します。公開前に確認してください。
+3. 1回につき最大10店をAIが簡易Web検索し、根拠URLつきの結果をまず `draft` として保存します。`pending` かつ分類・根拠URLが未保存の店舗だけを対象にするため、過去に調査済みの店舗は再調査しません。公開前に確認してください。
 
 ```bash
-# 未調査の最大3店をAIに調査させ、下書きとして保存する
+# 未調査の最大10店をAIに調査させ、下書きとして保存する
 curl -X POST https://your-domain.vercel.app/api/research/soup \
   -H "Content-Type: application/json" \
   -H "x-research-secret: $RESEARCH_API_SECRET" \
-  -d '{"limit":3}'
+  -d '{"limit":10}'
 
 # 下書きの確認（URL・分類・信頼度を返す）
 curl https://your-domain.vercel.app/api/research/soup?status=draft \
@@ -73,7 +73,13 @@ curl -X POST https://your-domain.vercel.app/api/research/soup/approve \
   -d '{"placeIds":["ChIJ..."]}'
 ```
 
-Windows PowerShellでは `$RESEARCH_API_SECRET` を `$env:RESEARCH_API_SECRET` に置き換えてください。Web検索とOpenAI APIは課金対象になり得るため、最初は1〜3店ずつ実行してください。下書きはサイトへ公開されず、承認済みの結果だけが店舗詳細の「スープ系統」に反映されます。
+Windows PowerShellでは `$RESEARCH_API_SECRET` を `$env:RESEARCH_API_SECRET` に置き換えてください。通常は低推論の簡易Web調査を使い、最大3並列で処理します。下書きはサイトへ公開されず、承認済みの結果だけが店舗詳細の「スープ系統」に反映されます。
+
+### 自動実行と承認画面
+
+`vercel.json` は毎日 **12:15（日本時間）** に最大10店を調査し、結果を下書きに保存します。VercelのProduction環境変数へ `CRON_SECRET` を設定してください。Cronはこの値をBearerトークンとして送信します。
+
+`RESEARCH_ADMIN_PASSWORD` もProduction環境変数へ設定すると、[`/admin/research`](/admin/research) で下書きの根拠URL・分類・信頼度を確認できます。画面から1店だけ手動調査、承認、却下も行えます。ログイン状態は8時間で失効し、管理用パスワード・OpenAI APIキー・サービスロールキーはいずれもブラウザに送信されません。
 
 ## Google Places API (New) 設定
 
