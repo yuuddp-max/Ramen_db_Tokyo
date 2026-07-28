@@ -1,3 +1,6 @@
 {
-  "crons": [{ "path": "/api/cron/research-soup", "schedule": "15 3 * * *" }]
+  "crons": [
+    { "path": "/api/cron/research-soup", "schedule": "15 3 * * *" },
+    { "path": "/api/cron/web-ramen", "schedule": "0 21 * * 6" }
+  ]
 }

@@ -10,6 +10,7 @@
 - `place_id` のユニーク制約と Supabase `upsert` による重複防止
 - ブラウザのローカルストレージによるお気に入り（認証導入後は `favorites` テーブルへ移行可能）
 - フェーズ2：ユーザー投稿の待ち時間、曜日・時間帯別の実績グラフ、天気・祝日・評価を加味した混雑予測
+- 今週の東京ラーメン話題投稿：Web検索から週1回調査し、東京の店舗名・別名・地域名と照合して表示
 
 ## ローカル起動
 
@@ -85,6 +86,22 @@ Windows PowerShellでは `$RESEARCH_API_SECRET` を `$env:RESEARCH_API_SECRET` �
 
 `RESEARCH_ADMIN_PASSWORD` もProduction環境変数へ設定すると、[`/admin/research`](/admin/research) で下書きの根拠URL・分類・信頼度を確認できます。画面から1店または10店を手動調査、承認、却下も行えます。ログイン状態は8時間で失効し、管理用パスワード・OpenAI APIキー・サービスロールキーはいずれもブラウザに送信されません。
 
+### 今週の東京ラーメン話題投稿（Web調査）
+
+Xの公開ポスト取得は使用せず、既存のOpenAI Responses APIの `web_search` を使って、直近7日間の東京ラーメン関連記事・店舗公式情報・ニュース・公開ブログを最大20件調査します。本文は長く転載せず、短い要約と出典URLだけを保存・表示します。
+
+Supabase SQL Editorで [`supabase/20260728_web_ramen_mentions.sql`](./supabase/20260728_web_ramen_mentions.sql) を一度実行してください。このmigrationは次の3テーブルを作成します。
+
+- `shop_aliases`: 店舗別名・表記揺れ
+- `web_ramen_mentions`: Web調査結果、店舗/地域判定、出典、ランキング
+- `web_fetch_logs`: Web調査の実行履歴と件数・エラー概要
+
+既存の `OPENAI_API_KEY`、`OPENAI_LOW_COST_RESEARCH_MODEL`、`SUPABASE_SERVICE_ROLE_KEY`、`CRON_SECRET` を使用します。新しいX用トークンは不要です。管理画面 `/admin/research` の「今週の話題投稿」から「Web調査を実行」を押すと手動実行できます。
+
+Vercel Cronは `/api/cron/web-ramen` を毎週 **日曜06:00（Asia/Tokyo）** に実行します。UTC設定は `0 21 * * 6` です。`CRON_SECRET` が一致しないリクエストは拒否し、実行中ログの一意制約で二重実行を防ぎます。
+
+Web調査のランキングは、情報源の信頼性・東京/店舗との関連性・新しさを0〜100で評価し、投稿日時の代わりに記事公開日時で経過時間補正します。エラー時は管理画面、Vercel Functions Logs、`web_fetch_logs.error_summary` を確認してください。
+
 ### 食べログ百名店CSVの取込
 
 利用権を確認したご自身のCSVだけを対象に、[`supabase/20260726_tabelog_hyakumeiten_awards.sql`](./supabase/20260726_tabelog_hyakumeiten_awards.sql) をSupabase SQL Editorで一度実行してから、`/admin/research` の「百名店の一括取込」を使います。CSVのヘッダーは次のとおりです。`selection_date` は任意です。
@@ -147,12 +164,21 @@ Vercel は Next.js を標準サポートするため追加設定は不要です�
 npm ci → typecheck → lint → build
 ```
 
+テストは次で実行します。Web APIはモックするため、APIキーなしでも実行できます。
+
+```bash
+npm run test
+```
+
 ビルドは環境変数未設定でも成功する設計です。実際の画面表示とデータ取り込みには各環境変数を設定してください。
 
 ## プロジェクト構成
 
 ```text
 src/app/api/import/route.ts  # Google Places (New) → Supabase UPSERT
+src/app/api/cron/web-ramen/route.ts # Vercel Cron: Web調査 → Supabase
+src/lib/web-ramen-client.ts   # OpenAI Responses web_searchクライアント（サーバー専用）
+src/lib/web-ramen-jobs.ts     # 判定・重複UPSERT・実行ログ
 src/app/api/shops/route.ts   # 店舗一覧検索API
 src/app/shops/[id]/page.tsx  # 店舗詳細
 src/components/              # 検索UI、Google Map、お気に入り
