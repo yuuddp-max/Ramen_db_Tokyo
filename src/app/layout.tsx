@@ -5,7 +5,7 @@ const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://ramen-db-tokyo-blus
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
-  title: { default: "TOKYO RAMEN | 東京ラーメン店検索", template: "%s | TOKYO RAMEN" },
+  title: { default: "東京ラーメンガイド | 東京のラーメン店検索", template: "%s | 東京ラーメンガイド" },
   description: "東京のラーメン店を、評価・口コミ数・営業時間・地図から探せるラーメンガイド。",
   applicationName: "TOKYO RAMEN",
   keywords: ["東京", "ラーメン", "ラーメン店", "つけ麺", "家系ラーメン", "二郎系", "ラーメン検索"],
@@ -25,7 +25,7 @@ export const metadata: Metadata = {
   },
 };
 
-export const viewport: Viewport = { themeColor: "#0b0b0b", colorScheme: "dark" };
+export const viewport: Viewport = { themeColor: "#ffffff", colorScheme: "light" };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return <html lang="ja"><body>{children}</body></html>;
