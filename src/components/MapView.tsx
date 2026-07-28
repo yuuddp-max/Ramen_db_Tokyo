@@ -8,12 +8,13 @@ declare global {
 }
 
 export type MapShop = Pick<RamenShop, "id" | "name" | "latitude" | "longitude" | "rating" | "user_ratings_total">;
-type Props = { shops: MapShop[]; selected?: MapShop; currentLocation?: { latitude: number; longitude: number } | null; radiusMeters?: number; onShopSelect?: (shop: MapShop) => void; className?: string };
+type Props = { shops: MapShop[]; selected?: MapShop; currentLocation?: { latitude: number; longitude: number } | null; radiusMeters?: number; focusCurrentLocationToken?: number; onShopSelect?: (shop: MapShop) => void; className?: string };
 
-export function MapView({ shops, selected, currentLocation, radiusMeters, onShopSelect, className = "" }: Props) {
+export function MapView({ shops, selected, currentLocation, radiusMeters, focusCurrentLocationToken, onShopSelect, className = "" }: Props) {
   const mapElement = useRef<HTMLDivElement>(null);
   const lastCenter = useRef<{ lat: number; lng: number } | null>(null);
   const lastCurrentLocationKey = useRef<string | null>(null);
+  const lastFocusToken = useRef<number | undefined>(undefined);
 
   useEffect(() => {
     const key = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
@@ -25,12 +26,14 @@ export function MapView({ shops, selected, currentLocation, radiusMeters, onShop
       if (!googleMaps || !mapElement.current) return;
       const currentLocationKey = currentLocation ? `${currentLocation.latitude.toFixed(5)},${currentLocation.longitude.toFixed(5)}` : null;
       const hasNewCurrentLocation = currentLocationKey !== null && currentLocationKey !== lastCurrentLocationKey.current;
-      const focus = hasNewCurrentLocation ? { latitude: currentLocation!.latitude, longitude: currentLocation!.longitude } : lastCenter.current ?? selected ?? (currentLocation ? { latitude: currentLocation.latitude, longitude: currentLocation.longitude } : shops[0]);
+      const shouldFocusCurrentLocation = focusCurrentLocationToken !== undefined && focusCurrentLocationToken !== lastFocusToken.current;
+      const focus = (hasNewCurrentLocation || shouldFocusCurrentLocation) ? { latitude: currentLocation!.latitude, longitude: currentLocation!.longitude } : lastCenter.current ?? selected ?? (currentLocation ? { latitude: currentLocation.latitude, longitude: currentLocation.longitude } : shops[0]);
       const map = new googleMaps.Map(mapElement.current, {
         center: "lat" in focus ? { lat: focus.lat, lng: focus.lng } : focus ? { lat: focus.latitude, lng: focus.longitude } : { lat: 35.6762, lng: 139.6503 },
         zoom: selected || hasNewCurrentLocation ? 16 : currentLocation ? 14 : 11,
       });
       lastCurrentLocationKey.current = currentLocationKey;
+      lastFocusToken.current = focusCurrentLocationToken;
       const infoWindow = new googleMaps.InfoWindow();
       const shopsById = new Map(shops.map((shop) => [shop.id, shop]));
 
@@ -97,7 +100,7 @@ export function MapView({ shops, selected, currentLocation, radiusMeters, onShop
     script.onload = initialise;
     document.head.appendChild(script);
     return () => { script.onload = null; destroyMap?.(); };
-  }, [shops, selected, currentLocation, radiusMeters, onShopSelect]);
+  }, [shops, selected, currentLocation, radiusMeters, focusCurrentLocationToken, onShopSelect]);
 
   if (!process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY) {
     return <div className={`map-grid grid place-items-center text-center text-sm text-stone-400 ${className}`}><p>Google Maps APIキーを設定すると<br />地図を表示できます。</p></div>;
