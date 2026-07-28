@@ -32,11 +32,11 @@ export function createWebRamenResearchClient(): WebRamenResearchClient {
         headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
         body: JSON.stringify({
           model: process.env.OPENAI_LOW_COST_RESEARCH_MODEL || "gpt-5.4-nano",
-          input: `あなたは東京ラーメンのWeb調査担当です。現在時刻は${now.toISOString()}、調査対象期間は${since}以降です。Web検索を使い、直近7日間に公開・更新された東京都内のラーメン店に関する話題記事、店舗公式ブログ、ニュース、公開ブログを最大20件探してください。Xの投稿は検索・採用しないでください。カップ麺、インスタント麺、自宅調理、東京以外の記事、ラーメンと無関係なページは除外してください。同じURLは1件だけにしてください。本文の長い転載はせず、summaryは80〜500文字の要約にしてください。source_scoreは新しさ、東京との関連、店舗情報の具体性、信頼できる一次情報を0〜100で評価してください。published_atが確認できない場合はnullにしてください。URLはHTTPSの直接URLのみ返してください。`,
+          input: `あなたは東京ラーメンのWeb調査担当です。現在時刻は${now.toISOString()}です。Web検索を使い、過去7日間（${since}以降）の東京のラーメン情報を調査してください。値引き、限定メニュー、テレビ・ニュース掲載、行列、SNSで話題になっている可能性がある店舗を優先し、急上昇候補を最大10店選んでください。各候補について、店名、エリア、急上昇理由、情報の日付、根拠（直接URL）をまとめてください。Xの投稿は検索・採用しないでください。カップ麺、インスタント麺、自宅調理、東京以外の記事、ラーメンと無関係なページは除外してください。同じURLは1件だけにしてください。本文の長い転載はせず、summaryは80〜500文字の要約にしてください。source_scoreは新しさ、東京との関連、話題性、店舗情報の具体性、信頼できる一次情報を0〜100で評価してください。published_atが確認できない場合はnullにしてください。URLはHTTPSの直接URLのみ返してください。`,
           tools: [{ type: "web_search", search_context_size: "low" }],
           max_tool_calls: 4,
           reasoning: { effort: "low" },
-          text: { verbosity: "low", format: { type: "json_schema", name: "web_ramen_mentions", strict: true, schema: { type: "object", additionalProperties: false, required: ["mentions"], properties: { mentions: { type: "array", maxItems: 20, items: { type: "object", additionalProperties: false, required: ["source_name", "title", "summary", "source_url", "published_at", "source_score", "matched_area"], properties: { source_name: { type: "string" }, title: { type: "string" }, summary: { type: "string" }, source_url: { type: "string" }, published_at: { type: ["string", "null"] }, source_score: { type: "number" }, matched_area: { type: ["string", "null"] } } } } } } } },
+          text: { verbosity: "low", format: { type: "json_schema", name: "web_ramen_mentions", strict: true, schema: { type: "object", additionalProperties: false, required: ["mentions"], properties: { mentions: { type: "array", maxItems: 10, items: { type: "object", additionalProperties: false, required: ["source_name", "title", "summary", "source_url", "published_at", "source_score", "matched_area"], properties: { source_name: { type: "string" }, title: { type: "string" }, summary: { type: "string" }, source_url: { type: "string" }, published_at: { type: ["string", "null"] }, source_score: { type: "number" }, matched_area: { type: ["string", "null"] } } } } } } } },
         }),
       });
       const payload = await response.json().catch(() => null) as ResponsesPayload | null;
