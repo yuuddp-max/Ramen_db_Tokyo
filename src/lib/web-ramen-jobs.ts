@@ -9,7 +9,10 @@ async function loadRows<T>(admin: SupabaseClient, table: "ramen_shops" | "shop_a
   const rows: T[] = [];
   for (let from = 0; ; from += 1000) {
     const { data, error } = await admin.from(table).select(columns).range(from, from + 999);
-    if (error) throw new Error("Failed to load web research catalog.");
+    // Aliases are an optional enrichment table. Older deployments may not
+    // have it yet; research can still run using canonical shop names.
+    if (error && table === "shop_aliases" && (error.code === "42P01" || error.code === "PGRST205")) return rows;
+    if (error) throw new Error(`Failed to load web research catalog (${table}).`);
     rows.push(...((data ?? []) as T[]));
     if (!data || data.length < 1000) return rows;
   }
@@ -28,11 +31,14 @@ export async function runWebRamenResearch(options: { client?: WebRamenResearchCl
   const log = await startLog(admin);
   const base = { fetched: 0, inserted: 0, updated: 0, matched: 0, excluded: 0, errors: 0, apiStatus: null, startedAt: log.started_at, completedAt: new Date().toISOString(), status: "failed" as const };
   try {
-    const [shops, aliases, result] = await Promise.all([
-      loadRows<ShopCandidate>(admin, "ramen_shops", "id,name,address,nearest_station"),
+    const [shopRows, aliases, result] = await Promise.all([
+      // Keep this query compatible with databases that have not yet applied
+      // optional station-enrichment migrations.
+      loadRows<{ id: string; name: string; address: string | null }>(admin, "ramen_shops", "id,name,address"),
       loadRows<ShopAlias>(admin, "shop_aliases", "shop_id,alias_name"),
       (options.client ?? createWebRamenResearchClient()).searchRecentMentions(),
     ]);
+    const shops: ShopCandidate[] = shopRows.map((shop) => ({ ...shop, nearest_station: null }));
     const candidates = dedupeWebMentions(result.mentions.map((mention) => {
       const match = classifyWebMention(`${mention.title}\n${mention.summary}`, shops, aliases);
       const exclusion = match.exclusionReason;
