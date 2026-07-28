@@ -39,6 +39,7 @@ drop trigger if exists web_ramen_mentions_set_updated_at on public.web_ramen_men
 create trigger web_ramen_mentions_set_updated_at before update on public.web_ramen_mentions
 for each row execute function public.set_updated_at();
 alter table public.web_ramen_mentions enable row level security;
+drop policy if exists "Anyone can read visible web ramen mentions" on public.web_ramen_mentions;
 create policy "Anyone can read visible web ramen mentions" on public.web_ramen_mentions for select using (is_visible = true);
 
 create table if not exists public.web_fetch_logs (
