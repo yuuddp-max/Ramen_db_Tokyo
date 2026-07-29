@@ -8,6 +8,7 @@ import type { RamenShop } from "@/types/ramen";
 
 export async function GET(request: NextRequest) {
   if (!supabase) return NextResponse.json({ shops: [], total: 0, message: "Supabase is not configured." });
+  const db = supabase;
   const params = request.nextUrl.searchParams;
   const query = params.get("q")?.trim() ?? "";
   const stationSearch = query.endsWith("駅");
@@ -32,37 +33,31 @@ export async function GET(request: NextRequest) {
   const sort = sortValue === "newest" || sortValue === "reviews" || (sortValue === "distance" && hasLocation) ? sortValue : "rating";
   const limit = Math.min(Math.max(Number(params.get("limit")) || 60, 1), 100);
   const offset = Math.max(Number(params.get("offset")) || 0, 0);
-  let builder = supabase.from("ramen_shops").select("*");
-  if (hasBounds) builder = builder.gte("latitude", south).lte("latitude", north).gte("longitude", west).lte("longitude", east);
-  if (genre) builder = builder.contains("genres", [genre]);
-  if (minRating !== null) builder = builder.gte("rating", minRating);
-  if (price) {
-    const priceLevels: Record<string, string[]> = {
-      "¥": ["PRICE_LEVEL_INEXPENSIVE", "¥"],
-      "¥¥": ["PRICE_LEVEL_MODERATE", "¥¥"],
-      "¥¥¥": ["PRICE_LEVEL_EXPENSIVE", "¥¥¥"],
-      "¥¥¥¥": ["PRICE_LEVEL_VERY_EXPENSIVE", "¥¥¥¥"],
-    };
+  if (rawIds !== null && !ids.length) return NextResponse.json({ shops: [], total: 0 });
+  const priceLevels: Record<string, string[]> = {
+    "¥": ["PRICE_LEVEL_INEXPENSIVE", "¥"],
+    "¥¥": ["PRICE_LEVEL_MODERATE", "¥¥"],
+    "¥¥¥": ["PRICE_LEVEL_EXPENSIVE", "¥¥¥"],
+    "¥¥¥¥": ["PRICE_LEVEL_VERY_EXPENSIVE", "¥¥¥¥"],
+  };
+  const buildQuery = () => {
+    let builder = db.from("ramen_shops").select("*");
+    if (hasBounds) builder = builder.gte("latitude", south).lte("latitude", north).gte("longitude", west).lte("longitude", east);
+    if (genre) builder = builder.contains("genres", [genre]);
+    if (minRating !== null) builder = builder.gte("rating", minRating);
     const levels = priceLevels[price];
     if (levels) builder = builder.in("price_level", levels);
-  }
-  if (rawIds !== null) {
-    if (!ids.length) return NextResponse.json({ shops: [], total: 0 });
-    builder = builder.in("id", ids);
-  }
-  builder = sort === "newest"
-    ? builder.order("created_at", { ascending: false })
-    : sort === "reviews"
-      ? builder.order("user_ratings_total", { ascending: false, nullsFirst: false })
-      : builder.order("rating", { ascending: false, nullsFirst: false });
+    if (rawIds !== null) builder = builder.in("id", ids);
+    return sort === "newest"
+      ? builder.order("created_at", { ascending: false })
+      : sort === "reviews"
+        ? builder.order("user_ratings_total", { ascending: false, nullsFirst: false })
+        : builder.order("rating", { ascending: false, nullsFirst: false });
+  };
   // Import results can contain different Place IDs for one physical storefront.
   // Read the import cap and deduplicate before applying pagination so pages and totals stay stable.
-  // Supabase's query builder is mutable. Execute ranges one at a time so each
-  // request keeps its own Range header instead of every request using the last page.
-  const resultPages = [];
-  for (let index = 0; index < 6; index += 1) {
-    resultPages.push(await builder.range(index * 1000, index * 1000 + 999));
-  }
+  // Build an independent query per range so all pages can be fetched in parallel.
+  const resultPages = await Promise.all(Array.from({ length: 6 }, (_, index) => buildQuery().range(index * 1000, index * 1000 + 999)));
   const error = resultPages.find((result) => result.error)?.error;
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   const data = resultPages.flatMap((result) => result.data ?? []);

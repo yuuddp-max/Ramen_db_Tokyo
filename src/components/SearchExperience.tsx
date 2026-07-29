@@ -1,7 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { FormEvent } from "react";
 import type { RamenShop } from "@/types/ramen";
 import type { MapShop } from "./MapView";
@@ -53,6 +53,7 @@ export function SearchExperience({ initialShops, initialTotal }: Props) {
   const [mapResetRevision, setMapResetRevision] = useState(0);
   const [sort, setSort] = useState("reviews");
   const [retryNonce, setRetryNonce] = useState(0);
+  const skippedInitialRequest = useRef(false);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -69,6 +70,9 @@ export function SearchExperience({ initialShops, initialTotal }: Props) {
 
   useEffect(() => {
     if (!initializedFromUrl) return;
+    const isDefaultInitialView = !query && !soup && !style && !minRating && !favoriteOnly && !recentOnly && !openOnly && page === 1 && sort === "reviews" && !mapVisible;
+    if (!skippedInitialRequest.current && isDefaultInitialView && initialShops.length > 0) { skippedInitialRequest.current = true; return; }
+    skippedInitialRequest.current = true;
     const controller = new AbortController(); setLoading(true); setSearchError("");
     const timer = setTimeout(async () => {
       try {
@@ -80,7 +84,7 @@ export function SearchExperience({ initialShops, initialTotal }: Props) {
       } catch (error) { if (!(error instanceof DOMException && error.name === "AbortError")) setSearchError("店舗情報を読み込めませんでした。時間をおいて、もう一度お試しください。"); } finally { setLoading(false); }
     }, 0);
     return () => { clearTimeout(timer); controller.abort(); };
-  }, [query, soup, style, minRating, sort, favoriteOnly, recentOnly, openOnly, favoriteIds, recentIds, page, initializedFromUrl, mapVisible, retryNonce]);
+  }, [query, soup, style, minRating, sort, favoriteOnly, recentOnly, openOnly, favoriteIds, recentIds, page, initializedFromUrl, mapVisible, retryNonce, initialShops.length]);
 
   useEffect(() => { if (!initializedFromUrl) return; const params = new URLSearchParams(); if (query) params.set("q", query); if (soup) params.set("soup", soup); if (style) params.set("style", style); if (minRating) params.set("minRating", minRating); if (openOnly) params.set("open", "1"); if (recentOnly) params.set("recent", "1"); if (favoriteOnly) params.set("favorite", "1"); if (page > 1) params.set("page", String(page)); window.history.replaceState(null, "", params.toString() ? `/?${params}` : "/"); }, [query, soup, style, minRating, openOnly, recentOnly, favoriteOnly, page, initializedFromUrl]);
   const clearFilters = useCallback(() => { setQuery(""); setQueryInput(""); setSoup(""); setStyle(""); setMinRating(""); setFavoriteOnly(false); setRecentOnly(false); setOpenOnly(false); setPage(1); }, []);
