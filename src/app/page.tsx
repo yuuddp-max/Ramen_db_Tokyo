@@ -16,7 +16,7 @@ export default async function Home() {
     const [{ data }, { count }, { data: xPosts }] = await Promise.all([
       supabase.from("ramen_shops").select("*").order("rating", { ascending: false, nullsFirst: false }).limit(10),
       supabase.from("ramen_shops").select("id", { count: "exact", head: true }),
-      supabase.from("web_ramen_mentions").select("*,ramen_shops(id,name)").eq("is_visible", true).gte("published_at", weekAgo).order("ranking_score", { ascending: false }).limit(100),
+      supabase.from("web_ramen_mentions").select("*,ramen_shops(id,name)").eq("is_visible", true).gte("published_at", weekAgo).order("ranking_score", { ascending: false }).limit(40),
     ]);
     shops = dedupeRamenShops((data as RamenShop[] | null) ?? []).slice(0, 12); total = count ?? 0;
     weeklyPosts = limitWebRamenMentions((xPosts as WebRamenMentionWithShop[] | null) ?? []);
