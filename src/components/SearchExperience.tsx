@@ -12,7 +12,7 @@ import { calculateDistanceMeters } from "@/lib/utils";
 import { RAMEN_SOUPS, RAMEN_STYLES } from "@/lib/ramen-genres";
 
 type Props = { initialShops: RamenShop[]; initialTotal: number };
-const PAGE_SIZE = 12;
+const PAGE_SIZE = 10;
 const MAP_RADIUS_METERS = 5_000;
 const TOKYO_STATION = { latitude: 35.681236, longitude: 139.767125 };
 const LazyMapView = dynamic(() => import("./MapView").then((module) => module.MapView), { ssr: false, loading: () => <div className="h-[360px] animate-pulse rounded-2xl border border-border bg-background-subtle sm:h-[460px]" aria-label="地図を読み込み中" /> });
@@ -72,7 +72,8 @@ export function SearchExperience({ initialShops, initialTotal }: Props) {
     const controller = new AbortController(); setLoading(true); setSearchError("");
     const timer = setTimeout(async () => {
       try {
-        const params = new URLSearchParams({ q: query, soup, style, minRating, sort, limit: String(PAGE_SIZE), offset: String((page - 1) * PAGE_SIZE), latitude: String(TOKYO_STATION.latitude), longitude: String(TOKYO_STATION.longitude), radiusMeters: String(MAP_RADIUS_METERS) });
+        const params = new URLSearchParams({ q: query, soup, style, minRating, sort, limit: String(PAGE_SIZE), offset: String((page - 1) * PAGE_SIZE) });
+        if (sort === "distance") { params.set("latitude", String(TOKYO_STATION.latitude)); params.set("longitude", String(TOKYO_STATION.longitude)); }
         if (mapVisible) params.set("includeMap", "true"); if (favoriteOnly) params.set("ids", favoriteIds.join(",")); if (recentOnly) params.set("ids", recentIds.join(",")); if (openOnly) params.set("openNow", "true");
         const response = await fetch(`/api/shops?${params}`, { signal: controller.signal }); if (!response.ok) throw new Error("店舗情報を読み込めませんでした");
         const data = await response.json(); setShops(data.shops ?? []); setMapShops(data.mapShops ?? data.shops ?? []); setTotal(data.total ?? 0);
