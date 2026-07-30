@@ -12,11 +12,10 @@ export default async function Home() {
   let total = 0;
   let weeklyPosts: WebRamenMentionWithShop[] = [];
   if (supabase) {
-    const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
     const [{ data }, { count }, { data: xPosts }] = await Promise.all([
       supabase.from("ramen_shops").select("*").order("rating", { ascending: false, nullsFirst: false }).limit(10),
       supabase.from("ramen_shops").select("id", { count: "exact", head: true }),
-      supabase.from("web_ramen_mentions").select("*,ramen_shops(id,name)").eq("is_visible", true).gte("published_at", weekAgo).order("ranking_score", { ascending: false }).limit(40),
+      supabase.from("web_ramen_mentions").select("*,ramen_shops(id,name)").eq("is_visible", true).order("published_at", { ascending: false, nullsFirst: false }).order("ranking_score", { ascending: false }).limit(40),
     ]);
     shops = dedupeRamenShops((data as RamenShop[] | null) ?? []).slice(0, 12); total = count ?? 0;
     weeklyPosts = limitWebRamenMentions((xPosts as WebRamenMentionWithShop[] | null) ?? []);
