@@ -26,43 +26,41 @@ export function MapView({ shops, selected, currentLocation, radiusMeters, focusC
       if (!googleMaps || !mapElement.current) return;
       const currentLocationKey = currentLocation ? `${currentLocation.latitude.toFixed(5)},${currentLocation.longitude.toFixed(5)}` : null;
       const hasNewCurrentLocation = currentLocationKey !== null && currentLocationKey !== lastCurrentLocationKey.current;
-      const shouldFocusCurrentLocation = Boolean(currentLocation) && focusCurrentLocationToken !== undefined && focusCurrentLocationToken !== lastFocusToken.current;
-      const focus = hasNewCurrentLocation || shouldFocusCurrentLocation ? { latitude: currentLocation!.latitude, longitude: currentLocation!.longitude } : lastCenter.current ?? selected ?? (currentLocation ? { latitude: currentLocation.latitude, longitude: currentLocation.longitude } : shops[0]);
-      const center = focus
-        ? "lat" in focus
-          ? { lat: focus.lat, lng: focus.lng }
-          : { lat: focus.latitude, lng: focus.longitude }
-        : { lat: 35.6762, lng: 139.6503 };
+      const shouldFocusCurrentLocation = focusCurrentLocationToken !== undefined && focusCurrentLocationToken !== lastFocusToken.current;
+      const focus = (hasNewCurrentLocation || shouldFocusCurrentLocation) ? { latitude: currentLocation!.latitude, longitude: currentLocation!.longitude } : lastCenter.current ?? selected ?? (currentLocation ? { latitude: currentLocation.latitude, longitude: currentLocation.longitude } : shops[0]);
       const map = new googleMaps.Map(mapElement.current, {
-        center,
-        zoom: selected || hasNewCurrentLocation || shouldFocusCurrentLocation ? 16 : currentLocation ? 14 : 11,
+        center: "lat" in focus ? { lat: focus.lat, lng: focus.lng } : focus ? { lat: focus.latitude, lng: focus.longitude } : { lat: 35.6762, lng: 139.6503 },
+        zoom: selected || hasNewCurrentLocation ? 16 : currentLocation ? 14 : 11,
       });
       lastCurrentLocationKey.current = currentLocationKey;
       lastFocusToken.current = focusCurrentLocationToken;
       const infoWindow = new googleMaps.InfoWindow();
       const shopsById = new Map(shops.map((shop) => [shop.id, shop]));
+
+      // The Data layer handles thousands of points more efficiently than one
+      // Marker instance per shop, while preserving click-through to details.
       map.data.addGeoJson({ type: "FeatureCollection", features: shops.map((shop) => ({ type: "Feature", properties: { shopId: shop.id }, geometry: { type: "Point", coordinates: [shop.longitude, shop.latitude] } })) });
       map.data.setStyle({ icon: { path: googleMaps.SymbolPath.CIRCLE, scale: 5, fillColor: "#e4ad42", fillOpacity: 0.9, strokeColor: "#111111", strokeWeight: 1.5 } });
       const shopClickListener = map.data.addListener("click", (event: any) => {
         const shop = shopsById.get(String(event.feature.getProperty("shopId")));
         if (!shop) return;
-          onShopSelect?.(shop);
-          const content = document.createElement("div");
-          content.className = "min-w-[180px] p-1 text-slate-900";
-          const name = document.createElement("p");
-          name.className = "font-bold";
-          name.textContent = shop.name;
-          const rating = document.createElement("p");
-          rating.className = "mt-1 text-sm";
-          rating.textContent = `★ ${shop.rating?.toFixed(1) ?? "–"} （${shop.user_ratings_total?.toLocaleString() ?? 0}件）`;
-          const link = document.createElement("a");
-          link.href = `/shops/${shop.id}`;
-          link.className = "mt-2 inline-block text-sm font-bold text-amber-700 underline";
-          link.textContent = "店舗詳細を見る";
-          content.append(name, rating, link);
-          infoWindow.setContent(content);
-          infoWindow.setPosition(event.latLng);
-          infoWindow.open({ map });
+        onShopSelect?.(shop);
+        const content = document.createElement("div");
+        content.className = "min-w-[180px] p-1 text-slate-900";
+        const name = document.createElement("p");
+        name.className = "font-bold";
+        name.textContent = shop.name;
+        const rating = document.createElement("p");
+        rating.className = "mt-1 text-sm";
+        rating.textContent = `★ ${shop.rating?.toFixed(1) ?? "–"} （${shop.user_ratings_total?.toLocaleString() ?? 0}件）`;
+        const link = document.createElement("a");
+        link.href = `/shops/${shop.id}`;
+        link.className = "mt-2 inline-block text-sm font-bold text-amber-700 underline";
+        link.textContent = "店舗詳細を見る";
+        content.append(name, rating, link);
+        infoWindow.setContent(content);
+        infoWindow.setPosition(event.latLng);
+        infoWindow.open({ map });
       });
       const currentLocationMarker = currentLocation ? new googleMaps.Marker({
         position: { lat: currentLocation.latitude, lng: currentLocation.longitude }, map, title: "現在地", zIndex: 10,

@@ -2,13 +2,32 @@
 @tailwind components;
 @tailwind utilities;
 
-:root { color-scheme: dark; }
+:root {
+  color-scheme: light;
+  --color-background: #fffdf8;
+  --color-surface: #ffffff;
+  --color-primary: #c93324;
+  --color-primary-dark: #9f271c;
+  --color-soy: #4a2a1d;
+  --color-miso: #c88924;
+  --color-cream: #f6eedf;
+  --color-green: #5f8f45;
+  --color-text: #211d1a;
+  --color-text-secondary: #716a64;
+  --color-border: #eae2d8;
+  --color-muted: #f5f2ee;
+  --color-overlay: rgba(0, 0, 0, 0.48);
+}
 * { box-sizing: border-box; }
 html { scroll-behavior: smooth; }
-body { margin: 0; background: #0b0b0b; color: #f7f3ec; font-family: Arial, Helvetica, "Hiragino Kaku Gothic ProN", Meiryo, sans-serif; }
+body { margin: 0; background: var(--color-background); color: var(--color-text); font-family: Inter, "Noto Sans JP", "Hiragino Kaku Gothic ProN", "Yu Gothic", sans-serif; }
 a { color: inherit; text-decoration: none; }
 button, input, select { font: inherit; }
 
-.grain { background-image: radial-gradient(rgba(255,255,255,.04) .7px, transparent .7px); background-size: 7px 7px; }
-.panel { border: 1px solid rgba(255,255,255,.1); background: rgba(28,28,28,.88); box-shadow: 0 16px 42px rgba(0,0,0,.28); }
-.map-grid { background-color: #1a1a1a; background-image: linear-gradient(rgba(216,166,75,.1) 1px, transparent 1px), linear-gradient(90deg, rgba(216,166,75,.1) 1px, transparent 1px); background-size: 28px 28px; }
+.grain { background: var(--color-background); }
+.panel { border: 1px solid var(--color-border); background: var(--color-surface); box-shadow: 0 1px 2px rgba(74,42,29,.06); }
+.map-grid { background-color: var(--color-muted); background-image: linear-gradient(rgba(201,51,36,.08) 1px, transparent 1px), linear-gradient(90deg, rgba(201,51,36,.08) 1px, transparent 1px); background-size: 28px 28px; }
+.scrollbar-none { scrollbar-width: none; -ms-overflow-style: none; }
+.scrollbar-none::-webkit-scrollbar { display: none; }
+:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; } }

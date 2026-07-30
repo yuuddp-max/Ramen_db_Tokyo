@@ -1,6 +1,4 @@
-import { SearchExperience } from "@/components/SearchExperience";
-import { WeeklyRamenPosts } from "@/components/WeeklyRamenPosts";
-import Link from "next/link";
+import { RamenHomeShell } from "@/components/RamenHomeShell";
 import { supabase, supabaseAdmin } from "@/lib/supabase";
 import type { RamenShop } from "@/types/ramen";
 import type { WebRamenMentionWithShop } from "@/types/web-ramen";
@@ -9,16 +7,6 @@ import { limitWebRamenMentions } from "@/lib/web-ramen-feed";
 
 export const dynamic = "force-dynamic";
 
-// Keep the first server render focused on the fixed Tokyo Station origin.
-// This prevents the page from briefly loading the entire database before the
-// client-side 5 km search completes.
-const TOKYO_STATION_BOUNDS = {
-  south: 35.636236,
-  north: 35.726236,
-  west: 139.707125,
-  east: 139.827125,
-};
-
 export default async function Home() {
   let shops: RamenShop[] = [];
   let total = 0;
@@ -26,9 +14,9 @@ export default async function Home() {
   if (supabase) {
     const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
     const [{ data }, { count }, { data: xPosts }] = await Promise.all([
-      supabase.from("ramen_shops").select("*").gte("latitude", TOKYO_STATION_BOUNDS.south).lte("latitude", TOKYO_STATION_BOUNDS.north).gte("longitude", TOKYO_STATION_BOUNDS.west).lte("longitude", TOKYO_STATION_BOUNDS.east).order("rating", { ascending: false, nullsFirst: false }).limit(48),
-      supabase.from("ramen_shops").select("id", { count: "exact", head: true }).gte("latitude", TOKYO_STATION_BOUNDS.south).lte("latitude", TOKYO_STATION_BOUNDS.north).gte("longitude", TOKYO_STATION_BOUNDS.west).lte("longitude", TOKYO_STATION_BOUNDS.east),
-      supabase.from("web_ramen_mentions").select("*,ramen_shops(id,name)").eq("is_visible", true).gte("published_at", weekAgo).order("ranking_score", { ascending: false }).limit(100),
+      supabase.from("ramen_shops").select("*").order("rating", { ascending: false, nullsFirst: false }).limit(10),
+      supabase.from("ramen_shops").select("id", { count: "exact", head: true }),
+      supabase.from("web_ramen_mentions").select("*,ramen_shops(id,name)").eq("is_visible", true).gte("published_at", weekAgo).order("ranking_score", { ascending: false }).limit(40),
     ]);
     shops = dedupeRamenShops((data as RamenShop[] | null) ?? []).slice(0, 12); total = count ?? 0;
     weeklyPosts = limitWebRamenMentions((xPosts as WebRamenMentionWithShop[] | null) ?? []);
@@ -55,5 +43,5 @@ export default async function Home() {
       "query-input": "required name=search_term_string",
     },
   };
-  return <main><script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }} /><header className="border-b border-white/10 bg-ink"><div className="mx-auto flex max-w-7xl items-center justify-between px-5 py-4 sm:px-8"><Link href="/" className="font-black tracking-tight">TOKYO <span className="text-ramen">RAMEN</span></Link><span className="text-xs tracking-[.18em] text-stone-500">RAMEN DIRECTORY</span></div></header><SearchExperience initialShops={shops} initialTotal={total} /><WeeklyRamenPosts posts={weeklyPosts} /><footer className="border-t border-white/10 px-5 py-8 text-center text-xs text-stone-600">© {new Date().getFullYear()} TOKYO RAMEN GUIDE</footer></main>;
+  return <><script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }} /><RamenHomeShell initialShops={shops} initialTotal={total} posts={weeklyPosts} /></>;
 }
