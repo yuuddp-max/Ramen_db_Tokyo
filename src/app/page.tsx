@@ -3,7 +3,8 @@ import { supabase, supabaseAdmin } from "@/lib/supabase";
 import type { RamenShop } from "@/types/ramen";
 import type { WebRamenMentionWithShop } from "@/types/web-ramen";
 import { dedupeRamenShops } from "@/lib/shop-deduplication";
-import { limitWebRamenMentions } from "@/lib/web-ramen-feed";
+import { dedupeWebMentions, limitWebRamenMentions } from "@/lib/web-ramen-feed";
+import { loadDriveNewsCsv } from "@/lib/drive-news-csv";
 
 export const dynamic = "force-dynamic";
 
@@ -11,15 +12,15 @@ export default async function Home() {
   let shops: RamenShop[] = [];
   let total = 0;
   let weeklyPosts: WebRamenMentionWithShop[] = [];
+  const drivePosts = await loadDriveNewsCsv();
   if (supabase) {
-    const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
     const [{ data }, { count }, { data: xPosts }] = await Promise.all([
       supabase.from("ramen_shops").select("*").order("rating", { ascending: false, nullsFirst: false }).limit(10),
       supabase.from("ramen_shops").select("id", { count: "exact", head: true }),
-      supabase.from("web_ramen_mentions").select("*,ramen_shops(id,name)").eq("is_visible", true).gte("published_at", weekAgo).order("ranking_score", { ascending: false }).limit(40),
+      supabase.from("web_ramen_mentions").select("*,ramen_shops(id,name)").eq("is_visible", true).order("published_at", { ascending: false, nullsFirst: false }).order("ranking_score", { ascending: false }).limit(40),
     ]);
     shops = dedupeRamenShops((data as RamenShop[] | null) ?? []).slice(0, 12); total = count ?? 0;
-    weeklyPosts = limitWebRamenMentions((xPosts as WebRamenMentionWithShop[] | null) ?? []);
+    weeklyPosts = limitWebRamenMentions(dedupeWebMentions([...drivePosts, ...((xPosts as WebRamenMentionWithShop[] | null) ?? [])]));
     if (supabaseAdmin && shops.length) {
       const { data: awards } = await supabaseAdmin
         .from("tabelog_hyakumeiten_awards")
@@ -30,6 +31,7 @@ export default async function Home() {
       shops = shops.map((shop) => ({ ...shop, has_tabelog_hyakumeiten: awardedShopIds.has(shop.id) }));
     }
   }
+  if (!supabase) weeklyPosts = limitWebRamenMentions(dedupeWebMentions(drivePosts));
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://ramen-db-tokyo-blush.vercel.app";
   const structuredData = {
     "@context": "https://schema.org",
