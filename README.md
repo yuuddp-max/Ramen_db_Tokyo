@@ -102,6 +102,15 @@ Vercel Cronは `/api/cron/web-ramen` を毎週 **日曜06:00（Asia/Tokyo）** �
 
 Web調査のランキングは、情報源の信頼性・東京/店舗との関連性・新しさを0〜100で評価し、投稿日時の代わりに記事公開日時で経過時間補正します。エラー時は管理画面、Vercel Functions Logs、`web_fetch_logs.error_summary` を確認してください。
 
+### Google DriveのニュースCSV
+
+Google Driveの「ラーメンNews」フォルダに置いたCSVもニュース画面へ表示できます。Vercelから取得できるよう、対象CSVを「リンクを知っている全員・閲覧可」に設定し、VercelのProduction環境変数に次のどちらか一方を設定してください。
+
+- `GOOGLE_DRIVE_NEWS_CSV_URL`: CSVの直接ダウンロードURL
+- `GOOGLE_DRIVE_NEWS_FILE_ID`: Google DriveのファイルID（`https://drive.google.com/file/d/<ID>/view` の `<ID>`）
+
+CSVは、`順位,店名,エリア,区分,急上昇理由,情報日,根拠要約,根拠URL,情報源種別,確信度` の列を読み込みます。5分間キャッシュし、ページ表示時に既存のSupabaseニュースと統合します。
+
 ### 食べログ百名店CSVの取込
 
 利用権を確認したご自身のCSVだけを対象に、[`supabase/20260726_tabelog_hyakumeiten_awards.sql`](./supabase/20260726_tabelog_hyakumeiten_awards.sql) をSupabase SQL Editorで一度実行してから、`/admin/research` の「百名店の一括取込」を使います。CSVのヘッダーは次のとおりです。`selection_date` は任意です。
