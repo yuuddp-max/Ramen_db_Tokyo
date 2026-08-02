@@ -47,7 +47,7 @@ function formatOpeningHours(value: unknown): string[] {
 export default async function ShopDetail({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   if (!supabase) notFound();
-  const { data } = await supabase.from("ramen_shops").select("*").eq("id", id).single();
+  const { data } = await supabase.from("ramen_shops").select("*").eq("id", id).eq("is_excluded", false).single();
   const shop = data as RamenShop | null;
   if (!shop) notFound();
   const openingHours = formatOpeningHours(shop.opening_hours);
