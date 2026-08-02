@@ -41,6 +41,8 @@ type Menu =
   | "summary"
   | "maintenance"
   | "local-csv"
+  | "feature-maintenance"
+  | "training-csv"
   | "name-maintenance"
   | "hyakumeiten";
 type PredictionScope = "unclassified" | "include-review" | "all" | "updated";
@@ -116,6 +118,16 @@ const menus: { key: Menu; label: string; description: string }[] = [
     key: "local-csv",
     label: "ローカル分類用CSV",
     description: "生成AI APIを使わず、ローカル分類モデル用のCSVを出力します。",
+  },
+  {
+    key: "feature-maintenance",
+    label: "店舗特徴情報",
+    description: "店舗名・説明・メニューから特徴語を抽出し、確認します。",
+  },
+  {
+    key: "training-csv",
+    label: "教師データCSV",
+    description: "手動承認済みの分類結果を学習用CSVとして出力します。",
   },
   {
     key: "name-maintenance",
@@ -631,13 +643,22 @@ export function ResearchAdmin({
       {active === "maintenance" && (
         <>
           <ClassificationMaintenance />
-          <RamenFeatureMaintenance />
-          <section className="panel mt-5 rounded-2xl p-6">
-            <h2 className="text-xl font-black">教師データCSV</h2>
-            <p className="mt-2 text-sm text-stone-400">手動修正した分類をローカルモデル学習用に出力します。</p>
-            <a href="/api/research/admin/classification-training.csv?fresh=1" className="mt-4 inline-block rounded-xl border border-gold px-4 py-3 font-bold text-gold">教師データCSVを出力</a>
-          </section>
         </>
+      )}
+      {active === "feature-maintenance" && <RamenFeatureMaintenance />}
+      {active === "training-csv" && (
+        <section className="mt-8 grid gap-5 lg:grid-cols-2">
+          <section className="panel rounded-2xl p-6">
+            <h2 className="text-2xl font-black">特徴情報付き教師データCSV</h2>
+            <p className="mt-3 text-sm text-stone-400">承認済みの店舗特徴情報をtext列へ反映した、ローカル分類モデル用CSVです。</p>
+            <a href="/api/research/admin/ramen-training-data.csv" className="mt-5 inline-block rounded-xl border border-gold px-4 py-3 font-bold text-gold">特徴付き教師CSVを出力</a>
+          </section>
+          <section className="panel rounded-2xl p-6">
+            <h2 className="text-2xl font-black">教師データCSV</h2>
+            <p className="mt-3 text-sm text-stone-400">手動修正した分類結果を従来形式で出力します。</p>
+            <a href="/api/research/admin/classification-training.csv?fresh=1" className="mt-5 inline-block rounded-xl border border-gold px-4 py-3 font-bold text-gold">教師データCSVを出力</a>
+          </section>
+        </section>
       )}
       {active === "local-csv" && (
         <section className="panel mt-8 rounded-2xl p-6">

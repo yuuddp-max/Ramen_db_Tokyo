@@ -133,7 +133,6 @@ export function RamenFeatureMaintenance() {
           <h2 className="mt-1 text-xl font-black">店舗特徴情報</h2>
           <p className="mt-2 text-sm text-stone-400">登録済みの店名・説明・メニュー・口コミ要約からキーワードを抽出します。外部APIや生成AIは使用しません。</p>
         </div>
-        <a href="/api/research/admin/ramen-training-data.csv" className="rounded-xl border border-gold px-4 py-3 text-sm font-bold text-gold">特徴付き教師CSVを出力</a>
       </div>
       <div className="mt-5 flex flex-wrap items-end gap-3">
         <label className="text-sm font-medium">取得件数
