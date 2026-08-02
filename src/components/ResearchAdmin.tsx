@@ -406,23 +406,23 @@ export function ResearchAdmin({
                     key={shop.place_id}
                     className="panel rounded-2xl p-5"
                   >
-                    <h2 className="text-lg font-bold">{shop.name}</h2>
-                    <p className="mt-1 text-sm text-stone-400">
-                      {shop.address}
-                    </p>
-                    <div className="mt-3 flex flex-wrap gap-2 text-sm">
-                      <span className="rounded bg-white/5 px-2 py-1 text-gold">
-                        ★ Google {shop.rating?.toFixed(1) ?? "–"}
-                      </span>
-                      <span className="rounded bg-white/5 px-2 py-1">
-                        口コミ{" "}
-                        {shop.user_ratings_total?.toLocaleString() ?? "–"}件
-                      </span>
-                      <span className="rounded bg-white/5 px-2 py-1">
-                        {shop.classificationMethod ?? "-"}
-                      </span>
+                    <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+                      <h2 className="min-w-0 text-lg font-bold">{shop.name}</h2>
+                      <p className="text-sm text-stone-400">{shop.address}</p>
+                      <div className="flex flex-wrap gap-2 text-sm">
+                        <span className="rounded bg-white/5 px-2 py-1 text-gold">
+                          ★ Google {shop.rating?.toFixed(1) ?? "–"}
+                        </span>
+                        <span className="rounded bg-white/5 px-2 py-1">
+                          口コミ{" "}
+                          {shop.user_ratings_total?.toLocaleString() ?? "–"}件
+                        </span>
+                        <span className="rounded bg-white/5 px-2 py-1">
+                          {shop.classificationMethod ?? "-"}
+                        </span>
+                      </div>
                     </div>
-                    <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                    <div className="mt-3 grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,2fr)] lg:items-end">
                       <label>
                         スープ分類
                         <select
@@ -461,38 +461,38 @@ export function ResearchAdmin({
                           ))}
                         </select>
                       </label>
-                    </div>
-                    <p className="mt-3 text-sm text-stone-400">
-                      確信度: soup {shop.soupConfidence?.toFixed(2) ?? "-"} /
-                      style {shop.styleConfidence?.toFixed(2) ?? "-"}
-                    </p>
-                    <div className="mt-4 flex gap-2">
-                      <button
-                        disabled={busy || !values.soup || !values.style}
-                        onClick={() => saveManual(shop)}
-                        className="rounded-lg border border-gold px-3 py-2 text-sm font-bold text-gold"
-                      >
-                        手動分類を保存
-                      </button>
-                      <button
-                        disabled={busy}
-                        onClick={() =>
-                          request("/api/research/soup/approve", {
-                            method: "POST",
-                            body: JSON.stringify({ placeIds: [shop.place_id] }),
-                          })
-                        }
-                        className="rounded-lg bg-emerald-400 px-3 py-2 text-sm font-bold text-ink"
-                      >
-                        手動承認
-                      </button>
-                      <button
-                        disabled={busy}
-                        onClick={() => excludeShop(shop)}
-                        className="rounded-lg border border-red-500/60 px-3 py-2 text-sm font-bold text-red-400 hover:bg-red-500/10"
-                      >
-                        ラーメン店ではないため削除
-                      </button>
+                      <div className="flex flex-wrap items-end gap-2 lg:col-span-1">
+                        <p className="mr-auto text-sm text-stone-400">
+                          確信度: soup {shop.soupConfidence?.toFixed(2) ?? "-"} /
+                          style {shop.styleConfidence?.toFixed(2) ?? "-"}
+                        </p>
+                        <button
+                          disabled={busy || !values.soup || !values.style}
+                          onClick={() => saveManual(shop)}
+                          className="rounded-lg border border-gold px-3 py-2 text-sm font-bold text-gold"
+                        >
+                          手動分類を保存
+                        </button>
+                        <button
+                          disabled={busy}
+                          onClick={() =>
+                            request("/api/research/soup/approve", {
+                              method: "POST",
+                              body: JSON.stringify({ placeIds: [shop.place_id] }),
+                            })
+                          }
+                          className="rounded-lg bg-emerald-400 px-3 py-2 text-sm font-bold text-ink"
+                        >
+                          手動承認
+                        </button>
+                        <button
+                          disabled={busy}
+                          onClick={() => excludeShop(shop)}
+                          className="rounded-lg border border-red-500/60 px-3 py-2 text-sm font-bold text-red-400 hover:bg-red-500/10"
+                        >
+                          ラーメン店ではないため削除
+                        </button>
+                      </div>
                     </div>
                   </article>
                 );
