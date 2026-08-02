@@ -5,6 +5,7 @@ import { matchesRamenTaxonomy } from "@/lib/ramen-genres";
 import { dedupeRamenShops, normalizeShopText } from "@/lib/shop-deduplication";
 import { searchTokyoLocation } from "@/lib/google-places";
 import type { RamenShop } from "@/types/ramen";
+import { calculateRamenTrustScore } from "@/lib/trust-score";
 
 export async function GET(request: NextRequest) {
   if (!supabase) return NextResponse.json({ shops: [], total: 0, message: "Supabase is not configured." });
@@ -69,6 +70,7 @@ export async function GET(request: NextRequest) {
     return (!openNow || getCurrentOpenStatus(shop.opening_hours).open) && matchesRamenTaxonomy(shop.name, soup, style) && (stationSearch ? stationMatches || textMatches : textMatches);
   });
   if (sort === "distance") matchingShops.sort((a, b) => calculateDistanceMeters(latitude, longitude, a.latitude, a.longitude) - calculateDistanceMeters(latitude, longitude, b.latitude, b.longitude));
+  if (sort === "rating") matchingShops.sort((a, b) => calculateRamenTrustScore(b).score - calculateRamenTrustScore(a).score);
   const pageShops = matchingShops.slice(offset, offset + limit);
   let awardedShopIds = new Set<string>();
   if (supabaseAdmin && pageShops.length) {
