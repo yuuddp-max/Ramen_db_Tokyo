@@ -572,7 +572,7 @@ export function ResearchAdmin({
             手動承認した分類を、将来のローカルモデル学習用CSVとして出力できます。
           </p>
           <a
-            href="/api/research/admin/classification-training.csv"
+            href="/api/research/admin/classification-training.csv?fresh=1"
             className="mt-5 inline-block rounded-xl border border-gold px-4 py-3 font-bold text-gold"
           >
             教師データCSVを出力
