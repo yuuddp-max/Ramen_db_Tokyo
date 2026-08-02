@@ -92,12 +92,6 @@ type WebFetchLog = {
 
 const menus: { key: Menu; label: string; description: string }[] = [
   {
-    key: "research",
-    label: "AIスープ分類レビュー",
-    description:
-      "ルール・ローカルモデル・生成AIフォールバックの結果を確認します。",
-  },
-  {
     key: "google",
     label: "Google Maps 新規データ取得",
     description: "Google Mapsで検索し、未登録店舗だけを追加します。",
@@ -170,7 +164,7 @@ export function ResearchAdmin({
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
-  const [active, setActive] = useState<Menu>("research");
+  const [active, setActive] = useState<Menu>("maintenance");
   const [query, setQuery] = useState("ラーメン");
   const [manual, setManual] = useState<
     Record<string, { soup: string; style: string }>
