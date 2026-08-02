@@ -112,7 +112,7 @@ export async function processClassificationJob(jobId: string, batchSize = 10) {
   const { data: candidates, error: shopError } = await admin.from("ramen_shops")
     .select('id,place_id,name,website,shop_description,representative_menu,review_summary,"classificationSourceHash"')
     .or("classificationStatus.is.null,classificationStatus.eq.pending,classificationStatus.eq.error")
-    .order("rating", { ascending: false, nullsFirst: false }).order("user_ratings_total", { ascending: false, nullsFirst: false }).limit(Math.min(safeBatch, remaining));
+    .order("user_ratings_total", { ascending: false, nullsFirst: false }).order("rating", { ascending: false, nullsFirst: false }).limit(Math.min(safeBatch, remaining));
   if (shopError) throw shopError;
   const shops = (candidates ?? []) as ShopRow[];
   if (!shops.length) {
