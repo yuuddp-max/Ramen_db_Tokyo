@@ -16,6 +16,8 @@ export function ClassificationMaintenance() {
   const [saving, setSaving] = useState<string | null>(null);
   const [message, setMessage] = useState("");
   const [page, setPage] = useState(0);
+  const [bulkSoup, setBulkSoup] = useState("");
+  const [bulkStyle, setBulkStyle] = useState("");
   const [values, setValues] = useState<Record<string, { soup: string; style: string }>>({});
   const load = useCallback(async () => {
     setLoading(true); setMessage("");
@@ -33,8 +35,8 @@ export function ClassificationMaintenance() {
   const visibleShops = shops.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
   useEffect(() => { setPage((current) => Math.min(current, pageCount - 1)); }, [pageCount]);
   const search = () => { setPage(0); void load(); };
-  const saveClassification = async (shop: Shop) => {
-    const selected = values[shop.place_id] ?? { soup: shop.soupCategory ?? "不明", style: shop.styleCategory ?? "不明" };
+  const saveClassification = async (shop: Shop, override?: { soup: string; style: string }) => {
+    const selected = override ?? values[shop.place_id] ?? { soup: shop.soupCategory ?? "不明", style: shop.styleCategory ?? "不明" };
     if (!selected.soup || !selected.style) return;
     const response = await fetch("/api/research/admin/manual-classification", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ placeId: shop.place_id, soupCategory: selected.soup, styleCategory: selected.style, finalize: true }) });
     const data = await response.json();
@@ -58,6 +60,26 @@ export function ClassificationMaintenance() {
     try { await load(); router.refresh(); } finally { setSaving(null); }
     setMessage(failed ? `${saved}件を保存しました。${failed}件は保存できませんでした。` : `${saved}件をまとめて保存しました。教師データにも反映されています。`);
   };
+  const bulkSave = async () => {
+    if (!visibleShops.length || (!bulkSoup && !bulkStyle)) return;
+    const targets = visibleShops.map((shop) => ({
+      shop,
+      selected: {
+        soup: bulkSoup || values[shop.place_id]?.soup || shop.soupCategory || "不明",
+        style: bulkStyle || values[shop.place_id]?.style || shop.styleCategory || "不明",
+      },
+    }));
+    setValues((current) => Object.fromEntries(Object.entries(current).map(([placeId, value]) => {
+      const target = targets.find((item) => item.shop.place_id === placeId);
+      return [placeId, target ? target.selected : value];
+    })));
+    setSaving("bulk"); setMessage("");
+    const results = await Promise.allSettled(targets.map(({ shop, selected }) => saveClassification(shop, selected)));
+    const saved = results.filter((result) => result.status === "fulfilled").length;
+    const failed = results.length - saved;
+    try { await load(); router.refresh(); } finally { setSaving(null); }
+    setMessage(failed ? `${saved}件を一括変更しました。${failed}件は保存できませんでした。` : `${saved}件のスープ系統・スタイルを一括変更しました。`);
+  };
   const exclude = async (shop: Shop) => {
     if (!window.confirm(`「${shop.name}」をラーメン店ではない店舗として一覧・分類対象から除外しますか？\n\nデータは完全削除されず、必要なら復元できます。`)) return;
     setSaving(shop.place_id); setMessage("");
@@ -80,6 +102,14 @@ export function ClassificationMaintenance() {
       <button disabled={loading || saving !== null || !visibleShops.length} onClick={() => void saveAll()} className="rounded-lg bg-gold px-4 py-2 text-sm font-bold text-ink disabled:cursor-not-allowed disabled:opacity-40">
         {saving === "batch" ? "まとめて保存中…" : `表示中をまとめて保存（${visibleShops.length}件）`}
       </button>
+    </div>
+    <div className="mt-3 rounded-xl border border-gold/30 bg-gold/5 p-4">
+      <p className="text-sm font-bold text-gold">表示中の店舗を一括変更</p>
+      <div className="mt-3 grid gap-3 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
+        <label className="text-sm font-medium text-white">スープ系統<select value={bulkSoup} onChange={(event) => setBulkSoup(event.target.value)} className="mt-1 block w-full rounded-lg border border-white/15 bg-black px-3 py-2 text-white"><option value="">変更しない</option>{SOUPS.map((value) => <option key={value}>{value}</option>)}</select></label>
+        <label className="text-sm font-medium text-white">スタイル<select value={bulkStyle} onChange={(event) => setBulkStyle(event.target.value)} className="mt-1 block w-full rounded-lg border border-white/15 bg-black px-3 py-2 text-white"><option value="">変更しない</option>{STYLES.map((value) => <option key={value}>{value}</option>)}</select></label>
+        <button disabled={loading || saving !== null || !visibleShops.length || (!bulkSoup && !bulkStyle)} onClick={() => void bulkSave()} className="rounded-lg bg-gold px-4 py-2 font-bold text-ink disabled:cursor-not-allowed disabled:opacity-40">{saving === "bulk" ? "一括変更中…" : `一括変更して保存（${visibleShops.length}件）`}</button>
+      </div>
     </div>
     <div className="mt-3 space-y-3">
       {visibleShops.map((shop) => {
