@@ -85,6 +85,8 @@ export const FEATURE_RULES: FeatureRule[] = [
   { keyword: "煮干し強め", normalizedValue: "煮干し強め", featureType: "taste", priority: 75 },
   { keyword: "豚骨臭控えめ", normalizedValue: "豚骨臭控えめ", featureType: "taste", priority: 75 },
   { keyword: "特製ラーメン", normalizedValue: "特製ラーメン", featureType: "menu", priority: 80 },
+  { keyword: "九州じゃんがら味噌", normalizedValue: "九州じゃんがら味噌", featureType: "menu", priority: 90 },
+  { keyword: "濃い口醤油のヴィーガン", normalizedValue: "濃い口醤油のヴィーガンらあめん", featureType: "menu", priority: 90 },
   { keyword: "濃厚煮干しそば", normalizedValue: "濃厚煮干しそば", featureType: "menu", priority: 90 },
   { keyword: "豚骨醤油ラーメン", normalizedValue: "豚骨醤油ラーメン", featureType: "menu", priority: 90 },
   { keyword: "塩そば", normalizedValue: "塩そば", featureType: "menu", priority: 80 },
@@ -112,6 +114,19 @@ export function extractFeatureKeywords(sourceText: string): FeatureKeywords {
     if (!text.includes(normalize(rule.keyword).toLowerCase())) continue;
     if (rule.excludeKeywords?.some((keyword) => text.includes(normalize(keyword).toLowerCase()))) continue;
     if (!result[rule.featureType].includes(rule.normalizedValue)) result[rule.featureType].push(rule.normalizedValue);
+  }
+  // Some official menu names contain a soup word without describing the shop's
+  // main soup, e.g. 九州じゃんがら味噌 or 濃い口醤油のヴィーガンらあめん.
+  // Keep the menu keyword, but avoid presenting that menu-only word as the
+  // restaurant's soup category when it appears nowhere else in the source.
+  const menuOnlySoupWords: Array<[string, string]> = [
+    ["九州じゃんがら味噌", "味噌"],
+    ["濃い口醤油のヴィーガン", "醤油"],
+  ];
+  for (const [phrase, soupWord] of menuOnlySoupWords) {
+    if (text.includes(phrase) && !text.replace(phrase, "").includes(soupWord)) {
+      result.soup = result.soup.filter((value) => value !== soupWord);
+    }
   }
   return result;
 }

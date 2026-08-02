@@ -38,6 +38,13 @@ describe("ramen feature keyword extraction", () => {
     expect(keywords.style.filter((value) => value === "担々麺")).toHaveLength(1);
   });
 
+  it("メニュー名だけの味噌・醤油はスープ系統に誤採用しない", () => {
+    const keywords = extractFeatureKeywords("九州じゃんがら味噌 濃い口醤油のヴィーガンらあめん");
+    expect(keywords.menu).toEqual(expect.arrayContaining(["九州じゃんがら味噌"]));
+    expect(keywords.soup).not.toContain("味噌");
+    expect(keywords.soup).not.toContain("醤油");
+  });
+
   it("特徴テキストは指定順で重複なく生成する", () => {
     const source = "家系 豚骨醤油 太麺";
     const keywords = extractFeatureKeywords(source);
