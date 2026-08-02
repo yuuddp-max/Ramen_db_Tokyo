@@ -11,7 +11,7 @@ import { calculateDistanceMeters } from "@/lib/utils";
 import { RAMEN_SOUPS, RAMEN_STYLES } from "@/lib/ramen-genres";
 
 type Props = { initialShops: RamenShop[]; initialTotal: number };
-const PAGE_SIZE = 10;
+const PAGE_SIZE = 12;
 const MAP_RADIUS_METERS = 5_000;
 const TOKYO_STATION = { latitude: 35.681236, longitude: 139.767125 };
 const LazyMapView = dynamic(() => import("./MapView").then((module) => module.MapView), { ssr: false, loading: () => <div className="h-[360px] animate-pulse rounded-2xl border border-border bg-background-subtle sm:h-[460px]" aria-label="地図を読み込み中" /> });
