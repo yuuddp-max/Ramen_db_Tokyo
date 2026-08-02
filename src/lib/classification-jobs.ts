@@ -95,14 +95,13 @@ export async function enqueueClassificationJob(requestedCount = 100) {
   return data;
 }
 
-export async function processClassificationJobs(batchSize = 10) {
+export async function processClassificationJob(jobId: string, batchSize = 10) {
   const admin = supabaseAdmin;
   if (!admin) throw new Error("Supabase service role is not configured.");
   const safeBatch = Math.min(Math.max(batchSize, 1), 20);
-  const { data: jobs, error: jobError } = await admin.from("classification_jobs").select("*").in("status", ["queued", "running"]).order("created_at", { ascending: true }).limit(1);
+  const { data: job, error: jobError } = await admin.from("classification_jobs").select("*").eq("id", jobId).in("status", ["queued", "running"]).maybeSingle();
   if (jobError) throw jobError;
-  const job = jobs?.[0];
-  if (!job) return { processed: 0, message: "No queued classification jobs." };
+  if (!job) return { processed: 0, message: "Classification job is not available." };
   if (job.status === "queued") await admin.from("classification_jobs").update({ status: "running", started_at: new Date().toISOString() }).eq("id", job.id).eq("status", "queued");
 
   const remaining = Math.max(job.requested_count - job.processed_count, 0);
@@ -143,6 +142,35 @@ export async function processClassificationJobs(batchSize = 10) {
   const complete = nextProcessed >= job.requested_count || shops.length < Math.min(safeBatch, remaining);
   await admin.from("classification_jobs").update({ processed_count: nextProcessed, auto_approved_count: job.auto_approved_count + autoApproved, needs_review_count: job.needs_review_count + needsReview, ai_count: job.ai_count + aiCount, error_count: job.error_count + errorCount, skipped_count: job.skipped_count + skipped, status: complete ? "completed" : "running", ...(complete ? { completed_at: new Date().toISOString() } : {}) }).eq("id", job.id);
   return { jobId: job.id, processed, autoApproved, needsReview, aiCount, errorCount, skipped, completed: complete };
+}
+
+export async function processClassificationJobs(batchSize = 10) {
+  const admin = supabaseAdmin;
+  if (!admin) throw new Error("Supabase service role is not configured.");
+  const { data: jobs, error } = await admin.from("classification_jobs").select("id").in("status", ["queued", "running"]).order("created_at", { ascending: true }).limit(1);
+  if (error) throw error;
+  const job = jobs?.[0];
+  if (!job) return { processed: 0, message: "No queued classification jobs." };
+  return processClassificationJob(job.id, batchSize);
+}
+
+// Runs after the admin response has returned.  The time budget keeps this
+// compatible with Vercel Function limits; an unfinished job remains queued
+// for the daily recovery worker.
+export async function processClassificationJobImmediately(jobId: string, requestedCount: number, maxDurationMs = 240_000) {
+  const started = Date.now();
+  let processed = 0;
+  let completed = false;
+  let batches = 0;
+  while (processed < requestedCount && Date.now() - started < maxDurationMs) {
+    const result = await processClassificationJob(jobId, Math.min(10, requestedCount - processed));
+    processed += result.processed;
+    batches += 1;
+    completed = Boolean(result.completed);
+    if (completed || result.processed === 0) break;
+  }
+  console.info("Immediate classification worker finished", { jobId, requestedCount, processed, batches, completed, durationMs: Date.now() - started });
+  return { jobId, processed, completed, batches, durationMs: Date.now() - started };
 }
 
 export function trainingTextFromShop(shop: ShopRow) {
