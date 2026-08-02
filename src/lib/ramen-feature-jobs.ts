@@ -17,6 +17,44 @@ type FeatureShop = {
   feature_status: string | null;
 };
 
+const OFFICIAL_FETCH_TIMEOUT_MS = 8_000;
+const OFFICIAL_TEXT_LIMIT = 24_000;
+
+function htmlToText(html: string) {
+  return html
+    .replace(/<script[\s\S]*?<\/script>/gi, " ")
+    .replace(/<style[\s\S]*?<\/style>/gi, " ")
+    .replace(/<noscript[\s\S]*?<\/noscript>/gi, " ")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;/gi, "'")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, OFFICIAL_TEXT_LIMIT);
+}
+
+async function fetchOfficialSiteText(url: string) {
+  if (!/^https?:\/\//i.test(url)) return "";
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), OFFICIAL_FETCH_TIMEOUT_MS);
+  try {
+    const response = await fetch(url, {
+      signal: controller.signal,
+      headers: { Accept: "text/html,text/plain;q=0.9", "User-Agent": "TokyoRamenDatabase/1.0 (+admin feature extraction)" },
+      redirect: "follow",
+    });
+    if (!response.ok) throw new Error(`公式サイトHTTP ${response.status}`);
+    const contentType = response.headers.get("content-type") ?? "";
+    if (contentType && !/text\/html|text\/plain/i.test(contentType)) return "";
+    const html = await response.text();
+    return htmlToText(html);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 export async function enqueueFeatureJob(requestedCount = 10) {
   if (!supabaseAdmin) throw new Error("Supabase service role is not configured.");
   const safeCount = Math.min(Math.max(requestedCount, 1), 1000);
@@ -60,13 +98,30 @@ export async function processFeatureJob(jobId: string, batchSize = 10) {
   let processed = 0; let databaseCount = 0; let needsReview = 0; let noInformation = 0; let errors = 0;
   for (const shop of shops) {
     try {
-      const { source, hash } = eligible(shop);
+      const { source: databaseSource, hash } = eligible(shop);
+      let source = databaseSource;
+      let officialFetched = false;
+      if (shop.website) {
+        try {
+          const officialText = await fetchOfficialSiteText(shop.website);
+          if (officialText) {
+            source = `${databaseSource} ${officialText}`.replace(/\s+/g, " ").trim();
+            officialFetched = true;
+          }
+        } catch (error) {
+          console.warn("Official ramen site fetch failed; continuing with database data", {
+            placeId: shop.place_id,
+            url: shop.website,
+            error: error instanceof Error ? error.message : "Unknown error",
+          });
+        }
+      }
       const keywords = extractFeatureKeywords(source);
       const text = buildFeatureText(shop.name, source, keywords, shop.representative_menu);
-      const confidence = featureConfidence(source, keywords);
+      const confidence = officialFetched ? Math.max(0.9, featureConfidence(source, keywords)) : featureConfidence(source, keywords);
       const hasFeatures = Object.values(keywords).some((values) => values.length > 0);
       const status = hasFeatures ? "needs-review" : "no-information";
-      const method = hasFeatures ? "keyword-rule" : "database";
+      const method = officialFetched ? (hasFeatures ? "mixed" : "official-site") : (hasFeatures ? "keyword-rule" : "database");
       const sourceUrls = [shop.website, shop.google_maps_uri].filter((value): value is string => Boolean(value?.trim()));
       const { error } = await admin.from("ramen_shops").update({ feature_text: text || null, feature_keywords: keywords as FeatureKeywords, feature_source_urls: sourceUrls, feature_source_hash: hash, feature_status: status, feature_method: method, feature_confidence: confidence, feature_updated_at: new Date().toISOString(), feature_error: null }).eq("id", shop.id);
       if (error) throw error;

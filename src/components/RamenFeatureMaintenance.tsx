@@ -131,7 +131,7 @@ export function RamenFeatureMaintenance() {
         <div>
           <p className="text-xs font-bold tracking-[.2em] text-gold">LOCAL FEATURE EXTRACTION</p>
           <h2 className="mt-1 text-xl font-black">店舗特徴情報</h2>
-          <p className="mt-2 max-w-3xl text-sm leading-6 text-stone-700">登録済みの店名・説明・メニュー・口コミ要約から、スープ・スタイル・麺・具材などの特徴語を抽出します。外部APIや生成AIは使用しません。</p>
+          <p className="mt-2 max-w-3xl text-sm leading-6 text-stone-700">登録済みの店名・説明・メニュー・口コミ要約と、登録済みの公式URL本文から、スープ・スタイル・麺・具材などの特徴語を抽出します。検索APIや生成AIは使用しません。</p>
         </div>
       </div>
       <div className="mt-5 rounded-xl border border-gold/40 bg-amber-50 p-4 text-sm text-stone-800">
@@ -159,7 +159,7 @@ export function RamenFeatureMaintenance() {
         {shops.map((shop) => (
           <article key={shop.place_id} className="rounded-xl border border-stone-300 bg-stone-50 p-4 shadow-sm">
             <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
-              <h3 className="font-bold text-stone-900">{shop.name}</h3><span className="text-sm text-stone-700">{shop.address ?? "住所なし"}</span><span className="rounded bg-amber-100 px-2 py-1 text-xs font-bold text-amber-900">{statusLabel(shop.feature_status)}</span><span className="text-xs font-medium text-stone-700">確信度 {shop.feature_confidence?.toFixed(2) ?? "-"}</span>
+              <h3 className="font-bold text-stone-900">{shop.name}</h3><span className="text-sm text-stone-700">{shop.address ?? "住所なし"}</span><span className="rounded bg-amber-100 px-2 py-1 text-xs font-bold text-amber-900">{statusLabel(shop.feature_status)}</span><span className="text-xs font-medium text-stone-700">確信度 {shop.feature_confidence?.toFixed(2) ?? "-"}</span><span className="text-xs font-medium text-stone-700">方法: {shop.feature_method ?? "-"}</span>
             </div>
             {(shop.shop_description || shop.representative_menu || shop.review_summary) && <p className="mt-2 text-xs leading-5 text-stone-700">{[shop.shop_description, shop.representative_menu, shop.review_summary].filter(Boolean).join(" ")}</p>}
             <label className="mt-3 block text-sm font-bold text-stone-900">生成された特徴テキスト（編集可能）<textarea value={edited[shop.place_id] ?? ""} onChange={(event) => setEdited((current) => ({ ...current, [shop.place_id]: event.target.value }))} rows={2} className="mt-1 w-full rounded-lg border border-stone-500 bg-black px-3 py-2 text-sm text-white placeholder:text-stone-500" /></label>
