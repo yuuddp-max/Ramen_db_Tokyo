@@ -56,6 +56,17 @@ Supabase SQL Editorで [`supabase/20260726_tabelog_hyakumeiten_awards.sql`](./su
 
 ### AIによるスープ系統の調査（下書き→承認）
 
+### ルールベース分類＋ローカル分類＋生成AIフォールバック
+
+`supabase/20260802_local_classification_pipeline.sql` をSupabase SQL Editorで一度実行してください。`/admin/research` の「未分類店舗を自動分類」はジョブを登録するだけで、`/api/cron/classification-jobs` がバックグラウンドで10件ずつ処理します。
+
+- ルール確信度 0.85 以上: 自動確定
+- ローカル分類の確信度 0.80 以上: 自動確定
+- ローカル分類 0.50〜0.79: 管理画面で確認
+- 0.50 未満: 生成AI APIへフォールバック
+
+分類元テキストのSHA-256が前回と同じ店舗はスキップされます。店名・店舗説明・代表メニュー・口コミ要約を更新すると、再分類待ちへ戻ります。管理画面のメンテナンスから手動承認データをCSVで出力でき、将来のローカルモデル学習に利用できます。
+
 1. Supabase SQL Editor で [`supabase/20260725_researched_soup_types.sql`](./supabase/20260725_researched_soup_types.sql) を一度実行します。今回の10店は公開済み（`approved`）、残りは未調査（`pending`）になります。
 2. OpenAI Platform のAPIキーを `OPENAI_API_KEY`、呼び出し保護用の十分長いランダム文字列を `RESEARCH_API_SECRET` として、Vercelの **Production** 環境変数に設定します。どちらもブラウザには公開しません。
 3. 1回につき最大10店を、評価点・口コミ数が高い順に調査します。まず登録済みの公式サイト本文を低コストモデルで分類し、取得できない店舗だけを最大1回のWeb検索へ回します。根拠URLつきの結果はまず `draft` として保存され、`pending` かつ分類・根拠URLが未保存の店舗だけを対象にするため、過去に調査済みの店舗は再調査しません。公開前に確認してください。

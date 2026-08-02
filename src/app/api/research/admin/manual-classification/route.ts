@@ -1,36 +1,33 @@
 import { NextRequest, NextResponse } from "next/server";
+import { buildClassificationText, classificationSourceHash, SOUP_CATEGORIES, STYLE_CATEGORIES } from "@/lib/shop-classification";
 import { isResearchAdminRequest } from "@/lib/research-admin-auth";
 import { supabaseAdmin } from "@/lib/supabase";
-
-const SOUP_TYPES = ["醤油", "塩", "味噌", "豚骨", "豚骨醤油", "鶏白湯", "魚介", "煮干し", "貝出汁", "海老", "牛骨", "担々麺", "カレー", "その他", "複数", "未確認"];
-const STYLES = ["東京中華そば", "家系", "二郎系", "二郎インスパイア", "大勝軒系", "つけ麺", "油そば", "まぜそば", "淡麗系", "濃厚系", "背脂系", "昆布水つけ麺", "冷やしラーメン", "その他", "未確認"];
 
 export async function POST(request: NextRequest) {
   if (!isResearchAdminRequest(request)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   if (!supabaseAdmin) return NextResponse.json({ error: "Supabase service role is not configured." }, { status: 500 });
-
   const body = await request.json().catch(() => ({}));
   const placeId = typeof body.placeId === "string" ? body.placeId : "";
-  const soupType = typeof body.soupType === "string" ? body.soupType : undefined;
-  const style = typeof body.style === "string" ? body.style : undefined;
-
+  const soupCategory = typeof body.soupCategory === "string" ? body.soupCategory : typeof body.soupType === "string" ? body.soupType : undefined;
+  const styleCategory = typeof body.styleCategory === "string" ? body.styleCategory : typeof body.style === "string" ? body.style : undefined;
   if (!placeId) return NextResponse.json({ error: "placeId is required." }, { status: 400 });
-  if (!soupType && !style) return NextResponse.json({ error: "スープ系統またはスタイルを選択してください。" }, { status: 400 });
-  if (soupType && !SOUP_TYPES.includes(soupType)) return NextResponse.json({ error: "Invalid soup type." }, { status: 400 });
-  if (style && !STYLES.includes(style)) return NextResponse.json({ error: "Invalid style." }, { status: 400 });
+  if (!soupCategory && !styleCategory) return NextResponse.json({ error: "スープ分類またはスタイル分類を選択してください。" }, { status: 400 });
+  if (soupCategory && !SOUP_CATEGORIES.includes(soupCategory as (typeof SOUP_CATEGORIES)[number])) return NextResponse.json({ error: "Invalid soup category." }, { status: 400 });
+  if (styleCategory && !STYLE_CATEGORIES.includes(styleCategory as (typeof STYLE_CATEGORIES)[number])) return NextResponse.json({ error: "Invalid style category." }, { status: 400 });
 
-  const updates: Record<string, string> = {
-    research_updated_at: new Date().toISOString(),
-  };
-  if (soupType) updates.researched_soup_type = soupType;
-  if (style) updates.researched_style = style;
-
-  const { error } = await supabaseAdmin
-    .from("ramen_shops")
-    .update(updates)
-    .eq("place_id", placeId)
-    .eq("research_status", "draft");
+  const { data: shop, error: selectError } = await supabaseAdmin.from("ramen_shops").select('id,name,website,shop_description,representative_menu,review_summary,"soupCategory","styleCategory"').eq("place_id", placeId).single();
+  if (selectError || !shop) return NextResponse.json({ error: selectError?.message ?? "Shop not found." }, { status: 404 });
+  const soup = soupCategory ?? shop.soupCategory;
+  const style = styleCategory ?? shop.styleCategory;
+  if (!SOUP_CATEGORIES.includes(soup as (typeof SOUP_CATEGORIES)[number]) || !STYLE_CATEGORIES.includes(style as (typeof STYLE_CATEGORIES)[number])) return NextResponse.json({ error: "スープ分類とスタイル分類の両方を指定してください。" }, { status: 400 });
+  const text = buildClassificationText({ name: shop.name, description: shop.shop_description, representativeMenu: shop.representative_menu, reviewSummary: shop.review_summary, website: shop.website });
+  const sourceHash = classificationSourceHash(text);
+  const now = new Date().toISOString();
+  const { error } = await supabaseAdmin.from("ramen_shops").update({
+    soupCategory: soup, styleCategory: style, soupConfidence: 1, styleConfidence: 1,
+    classificationMethod: "manual", classificationStatus: "needs-review", classificationVersion: "manual-v1", classificationSourceHash: sourceHash, classifiedAt: now,
+    researched_soup_type: soup, researched_style: style, research_confidence: "high", research_status: "draft", research_updated_at: now,
+  }).eq("id", shop.id);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-
   return NextResponse.json({ ok: true });
 }
