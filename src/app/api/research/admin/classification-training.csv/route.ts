@@ -24,5 +24,5 @@ export async function GET(request: NextRequest) {
     examples.set(`${sourceHash}:${row.soup_category}:${row.style_category}`, row);
   }
   const rows = ["classification_text,source_hash,soup_category,style_category,created_at", ...[...examples.values()].map((row) => [csv(row.classification_text), csv(row.source_hash), csv(row.soup_category), csv(row.style_category), csv(row.created_at)].join(","))];
-  return new NextResponse(`\uFEFF${rows.join("\n")}`, { headers: { "Content-Type": "text/csv; charset=utf-8", "Content-Disposition": 'attachment; filename="ramen-classification-training.csv"' } });
+  return new NextResponse(`\uFEFF${rows.join("\n")}`, { headers: { "Content-Type": "text/csv; charset=utf-8", "Content-Disposition": 'attachment; filename="ramen-classification-training.csv"', "Cache-Control": "no-store, no-cache, must-revalidate", Pragma: "no-cache" } });
 }
