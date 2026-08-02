@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { TabelogAwardsImport } from "@/components/TabelogAwardsImport";
 import { ClassificationMaintenance } from "@/components/ClassificationMaintenance";
 import { ShopNameMaintenance } from "@/components/ShopNameMaintenance";
+import { RamenFeatureMaintenance } from "@/components/RamenFeatureMaintenance";
 
 const SOUPS = [
   "醤油",
@@ -630,6 +631,7 @@ export function ResearchAdmin({
       {active === "maintenance" && (
         <>
           <ClassificationMaintenance />
+          <RamenFeatureMaintenance />
           <section className="panel mt-5 rounded-2xl p-6">
             <h2 className="text-xl font-black">ローカル分類用CSV</h2>
             <p className="mt-2 text-sm text-stone-400">ローカルモデルで分類するためのCSVを出力します。生成AI APIやAPIトークンは使用しません。</p>
