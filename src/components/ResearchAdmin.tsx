@@ -40,6 +40,7 @@ type Menu =
   | "webposts"
   | "summary"
   | "maintenance"
+  | "local-csv"
   | "name-maintenance"
   | "hyakumeiten";
 type PredictionScope = "unclassified" | "include-review" | "all" | "updated";
@@ -110,6 +111,11 @@ const menus: { key: Menu; label: string; description: string }[] = [
     key: "maintenance",
     label: "登録済みデータ メンテナンス",
     description: "不足情報を確認し、教師データを出力します。",
+  },
+  {
+    key: "local-csv",
+    label: "ローカル分類用CSV",
+    description: "生成AI APIを使わず、ローカル分類モデル用のCSVを出力します。",
   },
   {
     key: "name-maintenance",
@@ -627,37 +633,39 @@ export function ResearchAdmin({
           <ClassificationMaintenance />
           <RamenFeatureMaintenance />
           <section className="panel mt-5 rounded-2xl p-6">
-            <h2 className="text-xl font-black">ローカル分類用CSV</h2>
-            <p className="mt-2 text-sm text-stone-400">ローカルモデルで分類するためのCSVを出力します。生成AI APIやAPIトークンは使用しません。</p>
-            <div className="mt-4 flex flex-wrap items-end gap-3">
-              <label className="text-sm font-medium text-white">
-                出力対象
-                <select value={predictionScope} onChange={(event) => { const next = event.target.value as PredictionScope; if (next === "all" && !window.confirm("全店舗を出力対象にします。大量のデータが出力される可能性があります。続行しますか？")) return; setPredictionScope(next); setPredictionStats(null); setPredictionMessage(""); }} className="mt-1 block min-w-64 rounded-lg border border-white/15 bg-black px-3 py-2 text-white">
-                  <option value="unclassified">未分類のみ</option>
-                  <option value="include-review">確認待ちを含む</option>
-                  <option value="all">全店舗</option>
-                  <option value="updated">更新された店舗のみ</option>
-                </select>
-              </label>
-              <button disabled={predictionBusy} onClick={() => void exportPredictionCsv()} className="rounded-xl bg-gold px-4 py-3 font-bold text-ink disabled:cursor-wait disabled:opacity-50">
-                {predictionBusy ? "CSV作成中…" : "未分類店舗CSVを出力"}
-              </button>
-            </div>
-            {predictionMessage && <p className="mt-4 text-sm text-gold">{predictionMessage}</p>}
-            {predictionStats && <div className="mt-4 grid gap-2 text-xs text-stone-400 sm:grid-cols-2 lg:grid-cols-5">
-              <span>取得: {predictionStats.fetched}件</span>
-              <span>対象: {predictionStats.candidates}件</span>
-              <span>出力: {predictionStats.output}件</span>
-              <span>変更なし除外: {predictionStats.unchanged}件</span>
-              <span>テキスト不足: {predictionStats.missingText}件 / 重複除外: {predictionStats.duplicate}件</span>
-            </div>}
-          </section>
-          <section className="panel mt-5 rounded-2xl p-6">
             <h2 className="text-xl font-black">教師データCSV</h2>
             <p className="mt-2 text-sm text-stone-400">手動修正した分類をローカルモデル学習用に出力します。</p>
             <a href="/api/research/admin/classification-training.csv?fresh=1" className="mt-4 inline-block rounded-xl border border-gold px-4 py-3 font-bold text-gold">教師データCSVを出力</a>
           </section>
         </>
+      )}
+      {active === "local-csv" && (
+        <section className="panel mt-8 rounded-2xl p-6">
+          <h2 className="text-2xl font-black">ローカル分類用CSV</h2>
+          <p className="mt-3 text-sm text-stone-400">ローカルモデルで分類するためのCSVを出力します。生成AI APIやAPIトークンは使用しません。</p>
+          <div className="mt-5 flex flex-wrap items-end gap-3">
+            <label className="text-sm font-medium text-white">
+              出力対象
+              <select value={predictionScope} onChange={(event) => { const next = event.target.value as PredictionScope; if (next === "all" && !window.confirm("全店舗を出力対象にします。大量のデータが出力される可能性があります。続行しますか？")) return; setPredictionScope(next); setPredictionStats(null); setPredictionMessage(""); }} className="mt-1 block min-w-64 rounded-lg border border-white/15 bg-black px-3 py-2 text-white">
+                <option value="unclassified">未分類のみ</option>
+                <option value="include-review">確認待ちを含む</option>
+                <option value="all">全店舗</option>
+                <option value="updated">更新された店舗のみ</option>
+              </select>
+            </label>
+            <button disabled={predictionBusy} onClick={() => void exportPredictionCsv()} className="rounded-xl bg-gold px-4 py-3 font-bold text-ink disabled:cursor-wait disabled:opacity-50">
+              {predictionBusy ? "CSV作成中…" : "未分類店舗CSVを出力"}
+            </button>
+          </div>
+          {predictionMessage && <p className="mt-4 text-sm text-gold">{predictionMessage}</p>}
+          {predictionStats && <div className="mt-4 grid gap-2 text-xs text-stone-400 sm:grid-cols-2 lg:grid-cols-5">
+            <span>取得: {predictionStats.fetched}件</span>
+            <span>対象: {predictionStats.candidates}件</span>
+            <span>出力: {predictionStats.output}件</span>
+            <span>変更なし除外: {predictionStats.unchanged}件</span>
+            <span>テキスト不足: {predictionStats.missingText}件 / 重複除外: {predictionStats.duplicate}件</span>
+          </div>}
+        </section>
       )}
       {active === "name-maintenance" && <ShopNameMaintenance />}
       {active === "hyakumeiten" && (
