@@ -62,6 +62,14 @@ export function buildClassificationText(input: ClassificationInput) {
     .trim();
 }
 
+export function buildTrainingClassificationText(input: ClassificationInput) {
+  return [input.name, input.description, input.representativeMenu, input.reviewSummary]
+    .filter((value): value is string => Boolean(value?.trim()))
+    .join(" ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 export function classificationSourceHash(classificationText: string) {
   return createHash("sha256").update(classificationText, "utf8").digest("hex");
 }

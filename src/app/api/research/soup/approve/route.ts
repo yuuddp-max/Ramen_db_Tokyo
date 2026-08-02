@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
 import { isResearchAdminRequest, isResearchSecretRequest } from "@/lib/research-admin-auth";
-import { buildClassificationText, classificationSourceHash } from "@/lib/shop-classification";
+import { buildClassificationText, buildTrainingClassificationText, classificationSourceHash } from "@/lib/shop-classification";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -21,7 +21,10 @@ export async function POST(request: NextRequest) {
     const sourceHash = classificationSourceHash(buildClassificationText({ name: shop.name, description: shop.shop_description, representativeMenu: shop.representative_menu, reviewSummary: shop.review_summary, website: shop.website }));
     const { error } = await supabaseAdmin.from("ramen_shops").update({ research_status: "approved", research_updated_at: now, classificationStatus: "manually-approved", classificationMethod: "manual", classifiedAt: now, classificationSourceHash: sourceHash }).eq("id", shop.id);
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-    if (shop.soupCategory && shop.styleCategory) await supabaseAdmin.from("classification_training_examples").upsert({ shop_id: shop.id, classification_text: buildClassificationText({ name: shop.name, description: shop.shop_description, representativeMenu: shop.representative_menu, reviewSummary: shop.review_summary, website: shop.website }), source_hash: sourceHash, soup_category: shop.soupCategory, style_category: shop.styleCategory }, { onConflict: "shop_id,source_hash,soup_category,style_category" });
+    if (shop.soupCategory && shop.styleCategory) {
+      const trainingText = buildTrainingClassificationText({ name: shop.name, description: shop.shop_description, representativeMenu: shop.representative_menu, reviewSummary: shop.review_summary });
+      await supabaseAdmin.from("classification_training_examples").upsert({ shop_id: shop.id, classification_text: trainingText, source_hash: classificationSourceHash(trainingText), soup_category: shop.soupCategory, style_category: shop.styleCategory }, { onConflict: "shop_id,source_hash,soup_category,style_category" });
+    }
   }
   const data = (shops ?? []).map((shop) => ({ place_id: shop.place_id, name: shop.name }));
   return NextResponse.json({ approved: data?.length ?? 0, shops: data ?? [] });
