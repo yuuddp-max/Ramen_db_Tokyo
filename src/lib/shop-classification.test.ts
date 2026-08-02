@@ -11,6 +11,12 @@ describe("shop classification rules", () => {
     expect(result.style.confidence).toBeGreaterThanOrEqual(0.85);
   });
 
+  it("classifies 豚骨魚介 before the generic 豚骨 and 魚介 rules", () => {
+    const result = classifyWithRules(buildClassificationText({ name: "濃厚豚骨魚介ラーメン テスト店" }));
+    expect(result.soup.category).toBe("豚骨魚介");
+    expect(result.soup.confidence).toBeGreaterThanOrEqual(0.85);
+  });
+
   it("creates stable SHA-256 input hashes", () => {
     const text = buildClassificationText({ name: "中華そば テスト", reviewSummary: "淡麗な醤油スープ" });
     expect(classificationSourceHash(text)).toHaveLength(64);

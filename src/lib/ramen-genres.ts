@@ -6,6 +6,7 @@ export const RAMEN_SOUPS: RamenGenreOption[] = [
   { label: "味噌", keywords: ["味噌", "みそ"] },
   { label: "豚骨", keywords: ["豚骨", "とんこつ"] },
   { label: "豚骨醤油", keywords: ["豚骨醤油", "豚骨しょうゆ", "豚醤", "家系"] },
+  { label: "豚骨魚介", keywords: ["豚骨魚介", "魚介豚骨", "とんこつ魚介"] },
   { label: "鶏白湯", keywords: ["鶏白湯", "鳥白湯", "鶏ぱいたん"] },
   { label: "魚介", keywords: ["魚介", "節系", "魚粉"] },
   { label: "煮干し", keywords: ["煮干", "にぼし"] },
@@ -39,7 +40,7 @@ function findGenre(name: string, options: RamenGenreOption[]) {
 
 export function classifyRamen(name: string) {
   // More specific variants must win over their generic counterparts.
-  const soupOrder = [RAMEN_SOUPS[4], RAMEN_SOUPS[5], ...RAMEN_SOUPS.filter((option, index) => index !== 4 && index !== 5)];
+  const soupOrder = [RAMEN_SOUPS[4], RAMEN_SOUPS[5], RAMEN_SOUPS[6], ...RAMEN_SOUPS.filter((option, index) => index !== 4 && index !== 5 && index !== 6)];
   const styleOrder = [RAMEN_STYLES[3], ...RAMEN_STYLES.filter((_, index) => index !== 3)];
   return { soup: findGenre(name, soupOrder), style: findGenre(name, styleOrder) };
 }
