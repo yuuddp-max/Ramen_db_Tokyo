@@ -96,6 +96,7 @@ export function ClassificationMaintenance() {
     <h2 className="text-2xl font-black">スープ系統・スタイル修正</h2>
     <p className="mt-3 text-sm text-stone-400">登録済み店舗を検索して分類を修正します。保存すると承認済みになり、教師データCSVにも反映されます。</p>
     <div className="mt-5 flex flex-wrap gap-2"><input value={query} onChange={(event) => setQuery(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") search(); }} placeholder="店名で検索" className="min-w-64 flex-1 rounded-xl border border-white/10 bg-black/30 px-4 py-3" /><button disabled={loading} onClick={search} className="rounded-xl bg-gold px-4 py-3 font-bold text-ink">検索</button></div>
+    {pageCount > 1 && <div className="mt-4 flex items-center justify-center gap-3"><button disabled={page === 0 || loading} onClick={() => setPage((current) => Math.max(0, current - 1))} className="rounded-lg border border-white/15 px-4 py-2 text-sm font-bold text-stone-200 disabled:cursor-not-allowed disabled:opacity-40">前へ</button><span className="text-sm text-stone-400">{page + 1} / {pageCount}ページ</span><button disabled={page >= pageCount - 1 || loading} onClick={() => setPage((current) => Math.min(pageCount - 1, current + 1))} className="rounded-lg border border-white/15 px-4 py-2 text-sm font-bold text-stone-200 disabled:cursor-not-allowed disabled:opacity-40">次へ</button></div>}
     {message && <p className="mt-4 rounded-xl border border-gold/40 bg-gold/10 px-4 py-3 text-sm text-gold">{message}</p>}
     <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
       <p className="text-sm text-stone-500">{loading ? "読み込み中…" : shops.length ? `${shops.length}店中 ${page * PAGE_SIZE + 1}〜${Math.min((page + 1) * PAGE_SIZE, shops.length)}店を表示` : "0店"}</p>
@@ -153,11 +154,6 @@ export function ClassificationMaintenance() {
         );
       })}
     </div>
-    {pageCount > 1 && <div className="mt-5 flex items-center justify-center gap-3">
-      <button disabled={page === 0 || loading} onClick={() => setPage((current) => Math.max(0, current - 1))} className="rounded-lg border border-white/15 px-4 py-2 text-sm font-bold text-stone-200 disabled:cursor-not-allowed disabled:opacity-40">前へ</button>
-      <span className="text-sm text-stone-400">{page + 1} / {pageCount}ページ</span>
-      <button disabled={page >= pageCount - 1 || loading} onClick={() => setPage((current) => Math.min(pageCount - 1, current + 1))} className="rounded-lg border border-white/15 px-4 py-2 text-sm font-bold text-stone-200 disabled:cursor-not-allowed disabled:opacity-40">次へ</button>
-    </div>}
     {!loading && !shops.length && <p className="mt-6 text-center text-stone-400">該当する店舗がありません。</p>}
   </section>;
 }
