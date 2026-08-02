@@ -10,6 +10,7 @@ export async function POST(request: NextRequest) {
   const placeId = typeof body.placeId === "string" ? body.placeId : "";
   const soupCategory = typeof body.soupCategory === "string" ? body.soupCategory : typeof body.soupType === "string" ? body.soupType : undefined;
   const styleCategory = typeof body.styleCategory === "string" ? body.styleCategory : typeof body.style === "string" ? body.style : undefined;
+  const finalize = body.finalize === true;
   if (!placeId) return NextResponse.json({ error: "placeId is required." }, { status: 400 });
   if (!soupCategory && !styleCategory) return NextResponse.json({ error: "スープ分類またはスタイル分類を選択してください。" }, { status: 400 });
   if (soupCategory && !SOUP_CATEGORIES.includes(soupCategory as (typeof SOUP_CATEGORIES)[number])) return NextResponse.json({ error: "Invalid soup category." }, { status: 400 });
@@ -25,8 +26,8 @@ export async function POST(request: NextRequest) {
   const now = new Date().toISOString();
   const { error } = await supabaseAdmin.from("ramen_shops").update({
     soupCategory: soup, styleCategory: style, soupConfidence: 1, styleConfidence: 1,
-    classificationMethod: "manual", classificationStatus: "needs-review", classificationVersion: "manual-v1", classificationSourceHash: sourceHash, classifiedAt: now,
-    researched_soup_type: soup, researched_style: style, research_confidence: "high", research_status: "draft", research_updated_at: now,
+    classificationMethod: "manual", classificationStatus: finalize ? "manually-approved" : "needs-review", classificationVersion: "manual-v1", classificationSourceHash: sourceHash, classifiedAt: now,
+    researched_soup_type: soup, researched_style: style, research_confidence: "high", research_status: finalize ? "approved" : "draft", research_updated_at: now,
   }).eq("id", shop.id);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   const { error: trainingError } = await supabaseAdmin.from("classification_training_examples").upsert({

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { TabelogAwardsImport } from "@/components/TabelogAwardsImport";
+import { ClassificationMaintenance } from "@/components/ClassificationMaintenance";
 
 const SOUPS = [
   "醤油",
@@ -566,18 +567,14 @@ export function ResearchAdmin({
         </section>
       )}
       {active === "maintenance" && (
-        <section className="panel mt-8 rounded-2xl p-6">
-          <h2 className="text-2xl font-black">登録済みデータのメンテナンス</h2>
-          <p className="mt-3 text-sm text-stone-400">
-            手動承認した分類を、将来のローカルモデル学習用CSVとして出力できます。
-          </p>
-          <a
-            href="/api/research/admin/classification-training.csv?fresh=1"
-            className="mt-5 inline-block rounded-xl border border-gold px-4 py-3 font-bold text-gold"
-          >
-            教師データCSVを出力
-          </a>
-        </section>
+        <>
+          <ClassificationMaintenance />
+          <section className="panel mt-5 rounded-2xl p-6">
+            <h2 className="text-xl font-black">教師データCSV</h2>
+            <p className="mt-2 text-sm text-stone-400">手動修正した分類をローカルモデル学習用に出力します。</p>
+            <a href="/api/research/admin/classification-training.csv?fresh=1" className="mt-4 inline-block rounded-xl border border-gold px-4 py-3 font-bold text-gold">教師データCSVを出力</a>
+          </section>
+        </>
       )}
       {active === "hyakumeiten" && (
         <section className="mt-8">
