@@ -21,7 +21,24 @@ const OFFICIAL_FETCH_TIMEOUT_MS = 8_000;
 const OFFICIAL_TEXT_LIMIT = 24_000;
 
 function htmlToText(html: string) {
-  return html
+  const structured: string[] = [];
+  const title = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1];
+  if (title) structured.push(title);
+  for (const match of html.matchAll(/<meta[^>]+(?:name|property)=["'](?:description|og:title|og:description|twitter:title|twitter:description)["'][^>]+content=["']([^"']*)["'][^>]*>/gi)) structured.push(match[1]);
+  for (const match of html.matchAll(/<script[^>]+type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi)) {
+    try {
+      const value = JSON.parse(match[1]) as unknown;
+      const collect = (item: unknown) => {
+        if (typeof item === "string") structured.push(item);
+        else if (Array.isArray(item)) item.forEach(collect);
+        else if (item && typeof item === "object") Object.values(item).forEach(collect);
+      };
+      collect(value);
+    } catch {
+      structured.push(match[1]);
+    }
+  }
+  return `${structured.join(" ")} ${html}`
     .replace(/<script[\s\S]*?<\/script>/gi, " ")
     .replace(/<style[\s\S]*?<\/style>/gi, " ")
     .replace(/<noscript[\s\S]*?<\/noscript>/gi, " ")
