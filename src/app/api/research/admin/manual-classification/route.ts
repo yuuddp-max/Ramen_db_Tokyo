@@ -29,5 +29,13 @@ export async function POST(request: NextRequest) {
     researched_soup_type: soup, researched_style: style, research_confidence: "high", research_status: "draft", research_updated_at: now,
   }).eq("id", shop.id);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  const { error: trainingError } = await supabaseAdmin.from("classification_training_examples").upsert({
+    shop_id: shop.id,
+    classification_text: text,
+    source_hash: sourceHash,
+    soup_category: soup,
+    style_category: style,
+  }, { onConflict: "shop_id,source_hash,soup_category,style_category" });
+  if (trainingError) return NextResponse.json({ error: trainingError.message }, { status: 500 });
   return NextResponse.json({ ok: true });
 }
