@@ -52,6 +52,55 @@ function htmlToText(html: string) {
     .slice(0, OFFICIAL_TEXT_LIMIT);
 }
 
+function extractRepresentativeMenuText(html: string) {
+  // Prefer an explicitly labelled representative/featured menu.
+  const plain = html
+    .replace(/<script[\s\S]*?<\/script>/gi, " ")
+    .replace(/<style[\s\S]*?<\/style>/gi, " ")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/\s+/g, " ")
+    .trim();
+  const labelled = plain.match(/(?:代表|看板|おすすめ|オススメ|人気|定番)[^。．\n]{0,160}/i)?.[0];
+  if (labelled) return labelled.slice(0, OFFICIAL_TEXT_LIMIT);
+
+  // Some shop pages expose their menu in JSON-LD. Use only the first menu item,
+  // rather than importing the complete menu list into the classifier.
+  const jsonMenuNames: string[] = [];
+  for (const match of html.matchAll(/<script[^>]+type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi)) {
+    try {
+      const value = JSON.parse(match[1]) as unknown;
+      const collect = (item: unknown, key = "") => {
+        if (jsonMenuNames.length >= 1) return;
+        if (item && typeof item === "object" && !Array.isArray(item)) {
+          for (const [childKey, childValue] of Object.entries(item)) {
+            if (/(menu|hasMenuItem|menuItem)/i.test(childKey)) {
+              if (typeof childValue === "string") jsonMenuNames.push(childValue);
+              else if (Array.isArray(childValue)) {
+                const first = childValue[0];
+                if (first && typeof first === "object" && typeof (first as { name?: unknown }).name === "string") jsonMenuNames.push((first as { name: string }).name);
+                else if (typeof first === "string") jsonMenuNames.push(first);
+              } else if (childValue && typeof childValue === "object" && typeof (childValue as { name?: unknown }).name === "string") jsonMenuNames.push((childValue as { name: string }).name);
+            }
+            collect(childValue, childKey);
+            if (jsonMenuNames.length >= 1) return;
+          }
+        } else if (key && /menu/i.test(key) && typeof item === "string") jsonMenuNames.push(item);
+      };
+      collect(value);
+    } catch {
+      // Ignore malformed JSON-LD and continue with the next source.
+    }
+    if (jsonMenuNames.length) break;
+  }
+  if (jsonMenuNames.length) return htmlToText(jsonMenuNames[0]);
+
+  // WordPress shop pages often use this list for the shop's featured ramen.
+  const firstShopMenu = html.match(/shop_ramen_list[\s\S]{0,2000}?<li[^>]*>([\s\S]*?)<\/li>/i)?.[1];
+  return firstShopMenu ? htmlToText(firstShopMenu) : "";
+}
+
 async function fetchOfficialSiteText(url: string) {
   if (!/^https?:\/\//i.test(url)) return "";
   const controller = new AbortController();
@@ -66,7 +115,7 @@ async function fetchOfficialSiteText(url: string) {
     const contentType = response.headers.get("content-type") ?? "";
     if (contentType && !/text\/html|text\/plain/i.test(contentType)) return "";
     const html = await response.text();
-    return htmlToText(html);
+    return extractRepresentativeMenuText(html);
   } finally {
     clearTimeout(timer);
   }
