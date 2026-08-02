@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { TabelogAwardsImport } from "@/components/TabelogAwardsImport";
 import { ClassificationMaintenance } from "@/components/ClassificationMaintenance";
+import { ShopNameMaintenance } from "@/components/ShopNameMaintenance";
 
 const SOUPS = [
   "醤油",
@@ -38,7 +39,10 @@ type Menu =
   | "webposts"
   | "summary"
   | "maintenance"
+  | "name-maintenance"
   | "hyakumeiten";
+type PredictionScope = "unclassified" | "include-review" | "all" | "updated";
+type PredictionStats = { fetched: number; candidates: number; output: number; unchanged: number; missingText: number; duplicate: number };
 type Draft = {
   place_id: string;
   name: string;
@@ -113,6 +117,11 @@ const menus: { key: Menu; label: string; description: string }[] = [
     description: "不足情報を確認し、教師データを出力します。",
   },
   {
+    key: "name-maintenance",
+    label: "店名修正",
+    description: "登録済み店舗の店名を修正します。",
+  },
+  {
     key: "hyakumeiten",
     label: "百名店の一括取込",
     description: "利用権を確認したCSVを取り込みます。",
@@ -165,6 +174,10 @@ export function ResearchAdmin({
   const [manual, setManual] = useState<
     Record<string, { soup: string; style: string }>
   >({});
+  const [predictionScope, setPredictionScope] = useState<PredictionScope>("unclassified");
+  const [predictionBusy, setPredictionBusy] = useState(false);
+  const [predictionMessage, setPredictionMessage] = useState("");
+  const [predictionStats, setPredictionStats] = useState<PredictionStats | null>(null);
   const request = async (url: string, options: RequestInit = {}) => {
     setBusy(true);
     setMessage("");
@@ -234,6 +247,53 @@ export function ResearchAdmin({
       body: JSON.stringify({ placeId: shop.place_id }),
     });
   };
+  const exportPredictionCsv = async () => {
+    if (predictionBusy) return;
+    setPredictionBusy(true);
+    setPredictionMessage("Supabaseから店舗データを取得しています…");
+    setPredictionStats(null);
+    try {
+      const query = `?mode=preview&scope=${encodeURIComponent(predictionScope)}`;
+      const previewResponse = await fetch(`/api/research/admin/shops-to-predict.csv${query}`, { cache: "no-store" });
+      const preview = await previewResponse.json().catch(() => ({}));
+      if (!previewResponse.ok) throw new Error(preview.error ?? "CSVの出力に失敗しました");
+      const stats = preview.stats as PredictionStats;
+      setPredictionStats(stats);
+      setPredictionMessage("分類用テキストを生成しています…");
+      if (!stats.output) {
+        setPredictionMessage("出力対象の未分類店舗はありません");
+        return;
+      }
+      const scopeLabel = predictionScope === "all" ? "全店舗" : predictionScope === "updated" ? "更新された店舗" : predictionScope === "include-review" ? "未分類・確認待ち店舗" : "未分類店舗";
+      if (!window.confirm(`${scopeLabel}${stats.output}件をCSV出力します。\nこの処理では生成AI APIを使用せず、トークンも消費しません。\n出力を開始しますか？`)) {
+        setPredictionMessage("CSV出力をキャンセルしました。");
+        return;
+      }
+      setPredictionMessage("CSVファイルを作成しています…");
+      const downloadResponse = await fetch(`/api/research/admin/shops-to-predict.csv?mode=download&scope=${encodeURIComponent(predictionScope)}`, { cache: "no-store" });
+      if (!downloadResponse.ok) {
+        const error = await downloadResponse.json().catch(() => ({}));
+        throw new Error(error.error ?? "CSVの出力に失敗しました");
+      }
+      const blob = await downloadResponse.blob();
+      const disposition = downloadResponse.headers.get("content-disposition");
+      const filename = disposition?.match(/filename="([^"]+)"/)?.[1] ?? `shops_to_predict_${new Date().toISOString().replace(/[-:T.Z]/g, "").slice(0, 14)}.csv`;
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = filename;
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      URL.revokeObjectURL(url);
+      setPredictionMessage(`${stats.output}件の店舗データを出力しました`);
+    } catch (error) {
+      console.error("shops_to_predict CSV export failed", error);
+      setPredictionMessage(error instanceof Error ? error.message : "CSVの出力に失敗しました");
+    } finally {
+      setPredictionBusy(false);
+    }
+  };
   if (!authenticated)
     return (
       <main className="mx-auto max-w-md px-5 py-20">
@@ -292,7 +352,7 @@ export function ResearchAdmin({
           ログアウト
         </button>
       </div>
-      <nav className="mt-8 grid gap-2 sm:grid-cols-2 lg:grid-cols-6">
+      <nav className="mt-8 grid gap-2 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7">
         {menus.map((menu) => (
           <button
             key={menu.key}
@@ -571,12 +631,39 @@ export function ResearchAdmin({
         <>
           <ClassificationMaintenance />
           <section className="panel mt-5 rounded-2xl p-6">
+            <h2 className="text-xl font-black">ローカル分類用CSV</h2>
+            <p className="mt-2 text-sm text-stone-400">ローカルモデルで分類するためのCSVを出力します。生成AI APIやAPIトークンは使用しません。</p>
+            <div className="mt-4 flex flex-wrap items-end gap-3">
+              <label className="text-sm font-medium text-white">
+                出力対象
+                <select value={predictionScope} onChange={(event) => { const next = event.target.value as PredictionScope; if (next === "all" && !window.confirm("全店舗を出力対象にします。大量のデータが出力される可能性があります。続行しますか？")) return; setPredictionScope(next); setPredictionStats(null); setPredictionMessage(""); }} className="mt-1 block min-w-64 rounded-lg border border-white/15 bg-black px-3 py-2 text-white">
+                  <option value="unclassified">未分類のみ</option>
+                  <option value="include-review">確認待ちを含む</option>
+                  <option value="all">全店舗</option>
+                  <option value="updated">更新された店舗のみ</option>
+                </select>
+              </label>
+              <button disabled={predictionBusy} onClick={() => void exportPredictionCsv()} className="rounded-xl bg-gold px-4 py-3 font-bold text-ink disabled:cursor-wait disabled:opacity-50">
+                {predictionBusy ? "CSV作成中…" : "未分類店舗CSVを出力"}
+              </button>
+            </div>
+            {predictionMessage && <p className="mt-4 text-sm text-gold">{predictionMessage}</p>}
+            {predictionStats && <div className="mt-4 grid gap-2 text-xs text-stone-400 sm:grid-cols-2 lg:grid-cols-5">
+              <span>取得: {predictionStats.fetched}件</span>
+              <span>対象: {predictionStats.candidates}件</span>
+              <span>出力: {predictionStats.output}件</span>
+              <span>変更なし除外: {predictionStats.unchanged}件</span>
+              <span>テキスト不足: {predictionStats.missingText}件 / 重複除外: {predictionStats.duplicate}件</span>
+            </div>}
+          </section>
+          <section className="panel mt-5 rounded-2xl p-6">
             <h2 className="text-xl font-black">教師データCSV</h2>
             <p className="mt-2 text-sm text-stone-400">手動修正した分類をローカルモデル学習用に出力します。</p>
             <a href="/api/research/admin/classification-training.csv?fresh=1" className="mt-4 inline-block rounded-xl border border-gold px-4 py-3 font-bold text-gold">教師データCSVを出力</a>
           </section>
         </>
       )}
+      {active === "name-maintenance" && <ShopNameMaintenance />}
       {active === "hyakumeiten" && (
         <section className="mt-8">
           <TabelogAwardsImport />
