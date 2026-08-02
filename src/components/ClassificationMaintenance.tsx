@@ -33,18 +33,30 @@ export function ClassificationMaintenance() {
   const visibleShops = shops.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
   useEffect(() => { setPage((current) => Math.min(current, pageCount - 1)); }, [pageCount]);
   const search = () => { setPage(0); void load(); };
-  const save = async (shop: Shop) => {
+  const saveClassification = async (shop: Shop) => {
     const selected = values[shop.place_id] ?? { soup: shop.soupCategory ?? "不明", style: shop.styleCategory ?? "不明" };
     if (!selected.soup || !selected.style) return;
+    const response = await fetch("/api/research/admin/manual-classification", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ placeId: shop.place_id, soupCategory: selected.soup, styleCategory: selected.style, finalize: true }) });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error ?? "分類の保存に失敗しました。");
+  };
+  const save = async (shop: Shop) => {
     setSaving(shop.place_id); setMessage("");
     try {
-      const response = await fetch("/api/research/admin/manual-classification", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ placeId: shop.place_id, soupCategory: selected.soup, styleCategory: selected.style, finalize: true }) });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error ?? "分類の保存に失敗しました。");
+      await saveClassification(shop);
       await load(); router.refresh();
       setMessage(`${shop.name} の分類を保存しました。教師データにも反映されています。`);
     } catch (error) { setMessage(error instanceof Error ? error.message : "分類の保存に失敗しました。"); }
     finally { setSaving(null); }
+  };
+  const saveAll = async () => {
+    if (!visibleShops.length) return;
+    setSaving("batch"); setMessage("");
+    const results = await Promise.allSettled(visibleShops.map((shop) => saveClassification(shop)));
+    const saved = results.filter((result) => result.status === "fulfilled").length;
+    const failed = results.length - saved;
+    try { await load(); router.refresh(); } finally { setSaving(null); }
+    setMessage(failed ? `${saved}件を保存しました。${failed}件は保存できませんでした。` : `${saved}件をまとめて保存しました。教師データにも反映されています。`);
   };
   const exclude = async (shop: Shop) => {
     if (!window.confirm(`「${shop.name}」をラーメン店ではない店舗として一覧・分類対象から除外しますか？\n\nデータは完全削除されず、必要なら復元できます。`)) return;
@@ -63,7 +75,12 @@ export function ClassificationMaintenance() {
     <p className="mt-3 text-sm text-stone-400">登録済み店舗を検索して分類を修正します。保存すると承認済みになり、教師データCSVにも反映されます。</p>
     <div className="mt-5 flex flex-wrap gap-2"><input value={query} onChange={(event) => setQuery(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") search(); }} placeholder="店名で検索" className="min-w-64 flex-1 rounded-xl border border-white/10 bg-black/30 px-4 py-3" /><button disabled={loading} onClick={search} className="rounded-xl bg-gold px-4 py-3 font-bold text-ink">検索</button></div>
     {message && <p className="mt-4 rounded-xl border border-gold/40 bg-gold/10 px-4 py-3 text-sm text-gold">{message}</p>}
-    <p className="mt-5 text-sm text-stone-500">{loading ? "読み込み中…" : shops.length ? `${shops.length}店中 ${page * PAGE_SIZE + 1}〜${Math.min((page + 1) * PAGE_SIZE, shops.length)}店を表示` : "0店"}</p>
+    <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
+      <p className="text-sm text-stone-500">{loading ? "読み込み中…" : shops.length ? `${shops.length}店中 ${page * PAGE_SIZE + 1}〜${Math.min((page + 1) * PAGE_SIZE, shops.length)}店を表示` : "0店"}</p>
+      <button disabled={loading || saving !== null || !visibleShops.length} onClick={() => void saveAll()} className="rounded-lg bg-gold px-4 py-2 text-sm font-bold text-ink disabled:cursor-not-allowed disabled:opacity-40">
+        {saving === "batch" ? "まとめて保存中…" : `表示中をまとめて保存（${visibleShops.length}件）`}
+      </button>
+    </div>
     <div className="mt-3 space-y-3">
       {visibleShops.map((shop) => {
         const selected = values[shop.place_id] ?? {
@@ -95,10 +112,10 @@ export function ClassificationMaintenance() {
                   {STYLES.map((value) => <option key={value}>{value}</option>)}
                 </select>
               </label>
-              <button disabled={saving === shop.place_id} onClick={() => void save(shop)} className="rounded-lg bg-emerald-400 px-4 py-2 font-bold text-ink">
+              <button disabled={saving !== null} onClick={() => void save(shop)} className="rounded-lg bg-emerald-400 px-4 py-2 font-bold text-ink">
                 {saving === shop.place_id ? "保存中…" : "修正を保存"}
               </button>
-              <button disabled={saving === shop.place_id} onClick={() => void exclude(shop)} className="rounded-lg border border-red-500/60 px-4 py-2 font-bold text-red-400 hover:bg-red-500/10">
+              <button disabled={saving !== null} onClick={() => void exclude(shop)} className="rounded-lg border border-red-500/60 px-4 py-2 font-bold text-red-400 hover:bg-red-500/10">
                 削除
               </button>
             </div>

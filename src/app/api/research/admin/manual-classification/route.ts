@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { buildClassificationText, classificationSourceHash, SOUP_CATEGORIES, STYLE_CATEGORIES } from "@/lib/shop-classification";
+import { buildClassificationText, buildTrainingClassificationText, classificationSourceHash, SOUP_CATEGORIES, STYLE_CATEGORIES } from "@/lib/shop-classification";
 import { isResearchAdminRequest } from "@/lib/research-admin-auth";
 import { supabaseAdmin } from "@/lib/supabase";
 
@@ -23,6 +23,8 @@ export async function POST(request: NextRequest) {
   if (!SOUP_CATEGORIES.includes(soup as (typeof SOUP_CATEGORIES)[number]) || !STYLE_CATEGORIES.includes(style as (typeof STYLE_CATEGORIES)[number])) return NextResponse.json({ error: "スープ分類とスタイル分類の両方を指定してください。" }, { status: 400 });
   const text = buildClassificationText({ name: shop.name, description: shop.shop_description, representativeMenu: shop.representative_menu, reviewSummary: shop.review_summary, website: shop.website });
   const sourceHash = classificationSourceHash(text);
+  const trainingText = buildTrainingClassificationText({ name: shop.name, description: shop.shop_description, representativeMenu: shop.representative_menu, reviewSummary: shop.review_summary });
+  const trainingHash = classificationSourceHash(trainingText);
   const now = new Date().toISOString();
   const { error } = await supabaseAdmin.from("ramen_shops").update({
     soupCategory: soup, styleCategory: style, soupConfidence: 1, styleConfidence: 1,
@@ -32,8 +34,8 @@ export async function POST(request: NextRequest) {
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   const { error: trainingError } = await supabaseAdmin.from("classification_training_examples").upsert({
     shop_id: shop.id,
-    classification_text: text,
-    source_hash: sourceHash,
+    classification_text: trainingText,
+    source_hash: trainingHash,
     soup_category: soup,
     style_category: style,
   }, { onConflict: "shop_id,source_hash,soup_category,style_category" });
