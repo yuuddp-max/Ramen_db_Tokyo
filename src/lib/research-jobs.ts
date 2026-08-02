@@ -8,7 +8,7 @@ export async function runSoupResearch(limit = 10) {
   if (!admin) throw new Error("Supabase service role is not configured.");
   const safeLimit = Math.min(Math.max(limit, 1), 10);
   const { data: shops, error: selectError } = await admin.from("ramen_shops")
-    .select("id,place_id,name,address,website").eq("research_status", "pending")
+    .select("id,place_id,name,address,website").eq("is_excluded", false).eq("research_status", "pending")
     .is("researched_soup_type", null).is("research_evidence_url", null)
     .order("rating", { ascending: false, nullsFirst: false }).order("user_ratings_total", { ascending: false, nullsFirst: false }).limit(safeLimit);
   if (selectError) throw selectError;
