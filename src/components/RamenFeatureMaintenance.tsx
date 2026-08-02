@@ -159,7 +159,7 @@ export function RamenFeatureMaintenance() {
               <h3 className="font-bold">{shop.name}</h3><span className="text-sm text-stone-500">{shop.address ?? "住所なし"}</span><span className="rounded bg-white/5 px-2 py-1 text-xs text-gold">{statusLabel(shop.feature_status)}</span><span className="text-xs text-stone-500">確信度 {shop.feature_confidence?.toFixed(2) ?? "-"}</span>
             </div>
             {(shop.shop_description || shop.representative_menu || shop.review_summary) && <p className="mt-2 text-xs leading-5 text-stone-400">{[shop.shop_description, shop.representative_menu, shop.review_summary].filter(Boolean).join(" ")}</p>}
-            <textarea value={edited[shop.place_id] ?? ""} onChange={(event) => setEdited((current) => ({ ...current, [shop.place_id]: event.target.value }))} rows={2} className="mt-3 w-full rounded-lg border border-white/15 bg-black px-3 py-2 text-sm" />
+            <textarea value={edited[shop.place_id] ?? ""} onChange={(event) => setEdited((current) => ({ ...current, [shop.place_id]: event.target.value }))} rows={2} className="mt-3 w-full rounded-lg border border-white/15 bg-black px-3 py-2 text-sm text-white placeholder:text-stone-500" />
             <div className="mt-2 flex flex-wrap gap-x-5 gap-y-1 text-xs text-stone-400">
               {groups.map(([key, label]) => {
                 const values = shop.feature_keywords?.[key] ?? [];
