@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 
-export const SOUP_CATEGORIES = ["醤油", "塩", "味噌", "豚骨", "豚骨醤油", "鶏白湯", "煮干し", "魚介", "その他", "不明"] as const;
+export const SOUP_CATEGORIES = ["醤油", "塩", "味噌", "豚骨", "豚骨醤油", "豚骨魚介", "鶏白湯", "煮干し", "魚介", "その他", "不明"] as const;
 export const STYLE_CATEGORIES = ["中華そば", "家系", "二郎系", "つけ麺", "油そば・まぜそば", "担々麺", "博多系", "札幌系", "淡麗系", "濃厚系", "その他", "不明"] as const;
 export type SoupCategory = (typeof SOUP_CATEGORIES)[number];
 export type StyleCategory = (typeof STYLE_CATEGORIES)[number];
@@ -28,9 +28,10 @@ export type LocalModelResult = { soup: CategoryResult<SoupCategory>; style: Cate
 
 const soupRules: KeywordRule<SoupCategory>[] = [
   { category: "豚骨醤油", keywords: ["豚骨醤油", "豚骨しょうゆ", "横浜家系", "家系ラーメン"], excludeKeywords: [], priority: 100, score: 0.98 },
+  { category: "豚骨魚介", keywords: ["豚骨魚介", "魚介豚骨", "とんこつ魚介", "豚骨つけ麺"], excludeKeywords: [], priority: 98, score: 0.96 },
   { category: "鶏白湯", keywords: ["鶏白湯", "鳥白湯", "鶏ぱいたん"], excludeKeywords: [], priority: 95, score: 0.97 },
   { category: "煮干し", keywords: ["煮干し", "煮干", "にぼし"], excludeKeywords: ["煮干し粉のみ"], priority: 90, score: 0.96 },
-  { category: "豚骨", keywords: ["豚骨", "とんこつ"], excludeKeywords: ["豚骨醤油", "豚骨しょうゆ", "豚骨魚介"], priority: 80, score: 0.93 },
+  { category: "豚骨", keywords: ["豚骨", "とんこつ"], excludeKeywords: ["豚骨醤油", "豚骨しょうゆ", "豚骨魚介", "魚介豚骨"], priority: 80, score: 0.93 },
   { category: "味噌", keywords: ["味噌", "みそ"], excludeKeywords: ["味噌漬け"], priority: 75, score: 0.92 },
   { category: "塩", keywords: ["塩ラーメン", "塩らーめん", "塩そば", "塩味"], excludeKeywords: [], priority: 70, score: 0.91 },
   { category: "醤油", keywords: ["醤油ラーメン", "醤油らーめん", "醤油そば", "しょうゆラーメン"], excludeKeywords: ["豚骨醤油", "豚骨しょうゆ"], priority: 65, score: 0.90 },
