@@ -118,12 +118,6 @@ async function collect(scope: Scope) {
   };
 }
 
-function tokyoTimestamp() {
-  const parts = new Intl.DateTimeFormat("en-US", { timeZone: "Asia/Tokyo", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false }).formatToParts(new Date());
-  const get = (type: string) => parts.find((part) => part.type === type)?.value ?? "00";
-  return `${get("year")}${get("month")}${get("day")}_${get("hour")}${get("minute")}${get("second")}`;
-}
-
 export async function GET(request: NextRequest) {
   if (!isResearchAdminRequest(request)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   if (!supabaseAdmin) return NextResponse.json({ error: "Supabase service role is not configured." }, { status: 500 });
@@ -134,7 +128,7 @@ export async function GET(request: NextRequest) {
     if (request.nextUrl.searchParams.get("mode") !== "download") return NextResponse.json({ scope, stats: result.stats });
     if (!result.rows.length) return NextResponse.json({ error: "出力対象の未分類店舗はありません" }, { status: 404 });
     const content = [HEADER, ...result.rows.map((row) => [row.classification_text, row.source_hash, row.soup_category, row.style_category].map(csv).join(","))].join("\r\n");
-    return new NextResponse(`\uFEFF${content}\r\n`, { headers: { "Content-Type": "text/csv; charset=utf-8", "Content-Disposition": `attachment; filename="shops_to_predict_${tokyoTimestamp()}.csv"`, "Cache-Control": "no-store, no-cache, must-revalidate", Pragma: "no-cache" } });
+    return new NextResponse(`\uFEFF${content}\r\n`, { headers: { "Content-Type": "text/csv; charset=utf-8", "Content-Disposition": 'attachment; filename="ramen_db_iist.csv"', "Cache-Control": "no-store, no-cache, must-revalidate", Pragma: "no-cache" } });
   } catch (error) {
     console.error("shops_to_predict CSV export failed", error);
     return NextResponse.json({ error: "CSVの出力に失敗しました" }, { status: 500 });
