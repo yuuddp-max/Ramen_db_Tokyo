@@ -647,7 +647,30 @@ export function ResearchAdmin({
       )}
       {active === "feature-maintenance" && <RamenFeatureMaintenance />}
       {active === "training-csv" && (
-        <section className="mt-8 grid gap-5 lg:grid-cols-2">
+        <section className="mt-8">
+          <section className="panel rounded-2xl p-6 sm:p-8">
+            <p className="text-xs font-bold tracking-[.2em] text-gold">TRAINING DATA WORKFLOW</p>
+            <h2 className="mt-2 text-2xl font-black">教師データ作成の流れ</h2>
+            <div className="mt-5 rounded-2xl bg-stone-100 p-5 text-base text-stone-900 sm:p-7">
+              <ol className="space-y-3 font-medium">
+                <li>Supabaseの登録店舗</li>
+                <li className="pl-5 text-stone-500">↓</li>
+                <li>店舗名・説明・代表メニューから特徴語抽出</li>
+                <li className="pl-5 text-stone-500">↓</li>
+                <li>管理画面で確認・修正</li>
+                <li className="pl-5 text-stone-500">↓</li>
+                <li><code className="rounded bg-white px-1.5 py-0.5 text-sm">feature_text</code>として保存</li>
+                <li className="pl-5 text-stone-500">↓</li>
+                <li>教師データCSVへ出力</li>
+                <li className="pl-5 text-stone-500">↓</li>
+                <li><code className="rounded bg-white px-1.5 py-0.5 text-sm">python train.py</code>で再学習</li>
+              </ol>
+            </div>
+            <p className="mt-6 text-base text-stone-700">教師データCSVは、手動承認済みの分類だけを次の形式で出力します。</p>
+            <pre className="mt-4 overflow-x-auto rounded-2xl bg-stone-100 p-5 text-sm leading-7 text-stone-900"><code>{`id,text,soup_category,style_category\n1,横浜家系ラーメン 濃厚豚骨醤油 太麺 海苔 ほうれん草,豚骨醤油,家系\n2,淡麗煮干し中華そば 醤油 細麺,煮干し,中華そば\n3,濃厚鶏白湯ラーメン 鶏チャーシュー,鶏白湯,濃厚系\n4,札幌味噌ラーメン 炒め野菜 中太縮れ麺,味噌,札幌系\n5,汁なし担々麺 花椒 胡麻,その他,担々麺`}</code></pre>
+            <p className="mt-3 text-xs text-stone-600">実際のCSVでは、idにSupabaseの店舗ID（UUID）が入り、UTF-8 BOM付きで出力されます。</p>
+          </section>
+          <div className="mt-5 grid gap-5 lg:grid-cols-2">
           <section className="panel rounded-2xl p-6">
             <h2 className="text-2xl font-black">特徴情報付き教師データCSV</h2>
             <p className="mt-3 text-sm text-stone-400">承認済みの店舗特徴情報をtext列へ反映した、ローカル分類モデル用CSVです。</p>
@@ -658,6 +681,7 @@ export function ResearchAdmin({
             <p className="mt-3 text-sm text-stone-400">手動修正した分類結果を従来形式で出力します。</p>
             <a href="/api/research/admin/classification-training.csv?fresh=1" className="mt-5 inline-block rounded-xl border border-gold px-4 py-3 font-bold text-gold">教師データCSVを出力</a>
           </section>
+          </div>
         </section>
       )}
       {active === "local-csv" && (
