@@ -103,17 +103,17 @@ const menus: { key: Menu; label: string; description: string }[] = [
   },
   {
     key: "summary",
-    label: "登録済みデータ 集計",
+    label: "登録データ集計",
     description: "登録済みデータの状態を集計します。",
   },
   {
     key: "local-csv",
-    label: "ローカル分類用CSV",
+    label: "CSV出力",
     description: "生成AI APIを使わず、ローカル分類モデル用のCSVを出力します。",
   },
   {
     key: "classification-import",
-    label: "分類結果CSV取込",
+    label: "CSV取込",
     description: "ローカル環境で分類したCSVを取り込み、登録済み分類を更新します。",
   },
   {
