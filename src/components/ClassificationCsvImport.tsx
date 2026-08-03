@@ -34,7 +34,7 @@ export function ClassificationCsvImport() {
       <div className="mt-5 rounded-xl border border-gold/40 bg-amber-50 p-4 text-sm text-stone-800">
         <p className="font-bold text-stone-900">CSVに必要な列</p>
         <code className="mt-2 block overflow-x-auto text-xs">classification_text,source_hash,soup_category,style_category</code>
-        <p className="mt-2">または、特徴付き形式の <code>id,text,soup_category,style_category</code> も取り込めます。</p>
+        <p className="mt-2">分類対象の文章と、そのSHA-256ハッシュが一致する行だけを取り込みます。<code>created_at</code>列は任意で追加できます。</p>
       </div>
       <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center">
         <input type="file" accept=".csv,text/csv" onChange={(event) => setFile(event.target.files?.[0] ?? null)} className="block w-full rounded-xl border border-stone-400 bg-white px-3 py-3 text-sm text-stone-900 file:mr-3 file:rounded-lg file:border-0 file:bg-stone-100 file:px-3 file:py-2 file:font-bold" />
