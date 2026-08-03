@@ -40,8 +40,7 @@ type Menu =
   | "summary"
   | "local-csv"
   | "classification-import"
-  | "name-maintenance"
-  | "hyakumeiten";
+  | "name-maintenance";
 type PredictionScope = "unclassified" | "include-review" | "all" | "updated";
 type PredictionStats = { fetched: number; candidates: number; output: number; unchanged: number; missingText: number; duplicate: number };
 type Draft = {
@@ -120,11 +119,6 @@ const menus: { key: Menu; label: string; description: string }[] = [
     key: "name-maintenance",
     label: "店名修正",
     description: "登録済み店舗の店名を修正します。",
-  },
-  {
-    key: "hyakumeiten",
-    label: "百名店の一括取込",
-    description: "利用権を確認したCSVを取り込みます。",
   },
 ];
 
@@ -627,7 +621,12 @@ export function ResearchAdmin({
           <Card label="写真未登録" value={metrics.missingPhoto} />
         </section>
       )}
-      {active === "classification-import" && <ClassificationCsvImport />}
+      {active === "classification-import" && (
+        <>
+          <ClassificationCsvImport />
+          <TabelogAwardsImport />
+        </>
+      )}
       {active === "local-csv" && (
         <section className="panel mt-8 rounded-2xl p-6">
           <h2 className="text-2xl font-black">ローカル分類用CSV</h2>
@@ -657,11 +656,6 @@ export function ResearchAdmin({
         </section>
       )}
       {active === "name-maintenance" && <ShopNameMaintenance />}
-      {active === "hyakumeiten" && (
-        <section className="mt-8">
-          <TabelogAwardsImport />
-        </section>
-      )}
     </main>
   );
 }
