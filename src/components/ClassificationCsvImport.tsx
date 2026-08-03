@@ -37,7 +37,11 @@ export function ClassificationCsvImport() {
         <p className="mt-2">分類対象の文章と、そのSHA-256ハッシュが一致する行だけを取り込みます。<code>created_at</code>列は任意で追加できます。</p>
       </div>
       <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center">
-        <input type="file" accept=".csv,text/csv" onChange={(event) => setFile(event.target.files?.[0] ?? null)} className="block w-full rounded-xl border border-stone-400 bg-white px-3 py-3 text-sm text-stone-900 file:mr-3 file:rounded-lg file:border-0 file:bg-stone-100 file:px-3 file:py-2 file:font-bold" />
+        <label className="inline-flex cursor-pointer items-center rounded-xl border border-gold px-4 py-2 text-sm font-bold text-gold disabled:opacity-50">
+          <input type="file" accept=".csv,text/csv" className="sr-only" onChange={(event) => setFile(event.target.files?.[0] ?? null)} />
+          ファイルを選択
+        </label>
+        <span className="text-sm text-stone-500">{file?.name ?? "選択されていません"}</span>
         <button disabled={!file || busy} onClick={() => void importCsv()} className="shrink-0 rounded-xl bg-gold px-5 py-3 font-bold text-ink disabled:cursor-not-allowed disabled:opacity-50">{busy ? "取込中…" : "分類結果を登録"}</button>
       </div>
       {message && <p role="status" className="mt-4 whitespace-pre-line rounded-xl border border-gold/50 bg-amber-50 px-4 py-3 text-sm font-medium text-stone-900">{message}</p>}
