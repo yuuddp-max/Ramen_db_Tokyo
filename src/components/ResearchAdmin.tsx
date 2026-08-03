@@ -629,8 +629,9 @@ export function ResearchAdmin({
       )}
       {active === "local-csv" && (
         <section className="panel mt-8 rounded-2xl p-6">
-          <h2 className="text-2xl font-black">ローカル分類用CSV</h2>
+          <h2 className="text-2xl font-black">CSV出力</h2>
           <p className="mt-3 text-sm text-stone-400">ローカルモデルで分類するためのCSVを出力します。生成AI APIやAPIトークンは使用しません。</p>
+          <code className="mt-3 block overflow-x-auto text-xs text-stone-500">classification_text,source_hash,soup_category,style_category</code>
           <div className="mt-5 flex flex-wrap items-end gap-3">
             <label className="text-sm font-medium text-white">
               出力対象

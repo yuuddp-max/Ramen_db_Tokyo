@@ -7,7 +7,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const PAGE_SIZE = 1000;
-const HEADER = "classification_text,source_hash";
+const HEADER = "classification_text,source_hash,soup_category,style_category";
 const SCOPES = ["unclassified", "include-review", "all", "updated"] as const;
 type Scope = (typeof SCOPES)[number];
 
@@ -26,7 +26,7 @@ type ShopRow = {
   updated_at: string | null;
 };
 
-type PredictionRow = { classification_text: string; source_hash: string; updated_at: string };
+type PredictionRow = { classification_text: string; source_hash: string; soup_category: string; style_category: string; updated_at: string };
 
 function normalizeText(value: unknown): string {
   if (Array.isArray(value)) return value.flatMap((item) => normalizeText(item)).join(" ");
@@ -97,7 +97,13 @@ async function collect(scope: Scope) {
       missingText += 1;
       continue;
     }
-    const row = { classification_text: text, source_hash: sourceHash, updated_at: shop.updated_at ?? "" };
+    const row = {
+      classification_text: text,
+      source_hash: sourceHash,
+      soup_category: normalizeText(shop.soupCategory),
+      style_category: normalizeText(shop.styleCategory),
+      updated_at: shop.updated_at ?? "",
+    };
     const existing = latestByHash.get(sourceHash);
     if (existing) {
       duplicate += 1;
@@ -127,7 +133,7 @@ export async function GET(request: NextRequest) {
     const result = await collect(scope);
     if (request.nextUrl.searchParams.get("mode") !== "download") return NextResponse.json({ scope, stats: result.stats });
     if (!result.rows.length) return NextResponse.json({ error: "出力対象の未分類店舗はありません" }, { status: 404 });
-    const content = [HEADER, ...result.rows.map((row) => `${csv(row.classification_text)},${csv(row.source_hash)}`)].join("\r\n");
+    const content = [HEADER, ...result.rows.map((row) => [row.classification_text, row.source_hash, row.soup_category, row.style_category].map(csv).join(","))].join("\r\n");
     return new NextResponse(`\uFEFF${content}\r\n`, { headers: { "Content-Type": "text/csv; charset=utf-8", "Content-Disposition": `attachment; filename="shops_to_predict_${tokyoTimestamp()}.csv"`, "Cache-Control": "no-store, no-cache, must-revalidate", Pragma: "no-cache" } });
   } catch (error) {
     console.error("shops_to_predict CSV export failed", error);
