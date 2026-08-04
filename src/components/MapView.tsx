@@ -39,7 +39,8 @@ export function MapView({ shops, selected, currentLocation, radiusMeters, focusC
 
       // The Data layer handles thousands of points more efficiently than one
       // Marker instance per shop, while preserving click-through to details.
-      map.data.addGeoJson({ type: "FeatureCollection", features: shops.map((shop) => ({ type: "Feature", properties: { shopId: shop.id }, geometry: { type: "Point", coordinates: [shop.longitude, shop.latitude] } })) });
+      const dataLayerShops = selected ? shops.filter((shop) => shop.id !== selected.id) : shops;
+      map.data.addGeoJson({ type: "FeatureCollection", features: dataLayerShops.map((shop) => ({ type: "Feature", properties: { shopId: shop.id }, geometry: { type: "Point", coordinates: [shop.longitude, shop.latitude] } })) });
       map.data.setStyle({ icon: { path: googleMaps.SymbolPath.CIRCLE, scale: 5, fillColor: "#e4ad42", fillOpacity: 0.9, strokeColor: "#111111", strokeWeight: 1.5 } });
       const shopClickListener = map.data.addListener("click", (event: any) => {
         const shop = shopsById.get(String(event.feature.getProperty("shopId")));
