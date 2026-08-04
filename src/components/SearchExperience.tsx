@@ -35,7 +35,8 @@ export function SearchExperience({ initialShops, initialTotal }: Props) {
   const [minRating, setMinRating] = useState("");
   const [shops, setShops] = useState(initialShops);
   const [mapShops, setMapShops] = useState<MapShop[]>([]);
-  const [mapVisible, setMapVisible] = useState(false);
+  const mapVisible = true;
+  const setMapVisible = (_value: boolean) => undefined;
   const [total, setTotal] = useState(initialTotal);
   const [page, setPage] = useState(1);
   const [initializedFromUrl, setInitializedFromUrl] = useState(false);
@@ -68,7 +69,7 @@ export function SearchExperience({ initialShops, initialTotal }: Props) {
 
   useEffect(() => {
     if (!initializedFromUrl) return;
-    const isDefaultInitialView = !query && !soup && !style && !minRating && !favoriteOnly && !recentOnly && !openOnly && page === 1 && sort === "reviews" && !mapVisible;
+    const isDefaultInitialView = !query && !soup && !style && !minRating && !favoriteOnly && !recentOnly && !openOnly && page === 1 && sort === "reviews";
     if (!skippedInitialRequest.current && isDefaultInitialView && initialShops.length > 0) { skippedInitialRequest.current = true; return; }
     skippedInitialRequest.current = true;
     const controller = new AbortController(); setLoading(true); setSearchError("");
@@ -76,13 +77,13 @@ export function SearchExperience({ initialShops, initialTotal }: Props) {
       try {
         const params = new URLSearchParams({ q: query, soup, style, minRating, sort, limit: String(PAGE_SIZE), offset: String((page - 1) * PAGE_SIZE) });
         if (sort === "distance") { params.set("latitude", String(TOKYO_STATION.latitude)); params.set("longitude", String(TOKYO_STATION.longitude)); }
-        if (mapVisible) params.set("includeMap", "true"); if (favoriteOnly) params.set("ids", favoriteIds.join(",")); if (recentOnly) params.set("ids", recentIds.join(",")); if (openOnly) params.set("openNow", "true");
+        params.set("includeMap", "true"); if (favoriteOnly) params.set("ids", favoriteIds.join(",")); if (recentOnly) params.set("ids", recentIds.join(",")); if (openOnly) params.set("openNow", "true");
         const response = await fetch(`/api/shops?${params}`, { signal: controller.signal }); if (!response.ok) throw new Error("店舗情報を読み込めませんでした");
         const data = await response.json(); setShops(data.shops ?? []); setMapShops(data.mapShops ?? data.shops ?? []); setTotal(data.total ?? 0);
       } catch (error) { if (!(error instanceof DOMException && error.name === "AbortError")) setSearchError("店舗情報を読み込めませんでした。時間をおいて、もう一度お試しください。"); } finally { setLoading(false); }
     }, 0);
     return () => { clearTimeout(timer); controller.abort(); };
-  }, [query, soup, style, minRating, sort, favoriteOnly, recentOnly, openOnly, favoriteIds, recentIds, page, initializedFromUrl, mapVisible, retryNonce, initialShops.length]);
+  }, [query, soup, style, minRating, sort, favoriteOnly, recentOnly, openOnly, favoriteIds, recentIds, page, initializedFromUrl, retryNonce, initialShops.length]);
 
   useEffect(() => { if (!initializedFromUrl) return; const params = new URLSearchParams(); if (query) params.set("q", query); if (soup) params.set("soup", soup); if (style) params.set("style", style); if (minRating) params.set("minRating", minRating); if (openOnly) params.set("open", "1"); if (recentOnly) params.set("recent", "1"); if (favoriteOnly) params.set("favorite", "1"); if (page > 1) params.set("page", String(page)); window.history.replaceState(null, "", params.toString() ? `/?${params}` : "/"); }, [query, soup, style, minRating, openOnly, recentOnly, favoriteOnly, page, initializedFromUrl]);
   const clearFilters = useCallback(() => { setQuery(""); setSoup(""); setStyle(""); setMinRating(""); setFavoriteOnly(false); setRecentOnly(false); setOpenOnly(false); setPage(1); }, []);
