@@ -30,6 +30,22 @@ function matchKey(value: unknown) {
   return normalize(value).toLocaleLowerCase("ja-JP").replace(/[\s　・･.,，、「」『』（）()［］\[\]【】「」]/g, "");
 }
 
+function normalizeSoupCategory(value: string) {
+  const aliases: Record<string, string> = { "しょうゆ": "醤油", "しょう油": "醤油", "みそ": "味噌", "とんこつ": "豚骨", "にぼし": "煮干し" };
+  return aliases[value] ?? value;
+}
+
+function normalizeStyleCategory(value: string) {
+  const aliases: Record<string, string> = {
+    "まぜそば": "油そば・まぜそば",
+    "混ぜそば": "油そば・まぜそば",
+    "油そば": "油そば・まぜそば",
+    "家系ラーメン": "家系",
+    "二郎": "二郎系",
+  };
+  return aliases[value] ?? value;
+}
+
 function predictionText(shop: ShopRow) {
   return normalize(shop.name);
 }
@@ -112,8 +128,8 @@ export async function POST(request: NextRequest) {
     const id = value(row, "id");
     const text = value(row, "classification_text");
     const suppliedSourceHash = value(row, "source_hash");
-    const soup = value(row, "soup_category");
-    const style = value(row, "style_category");
+    const soup = normalizeSoupCategory(value(row, "soup_category"));
+    const style = normalizeStyleCategory(value(row, "style_category"));
     const shop = byId.get(id) ?? findByPartialId(id) ?? byName.get(matchKey(text)) ?? findByLegacyText(text) ?? byHash.get(suppliedSourceHash);
     const missing: string[] = [];
     if (!id) missing.push("id");
