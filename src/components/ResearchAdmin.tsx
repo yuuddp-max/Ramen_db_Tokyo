@@ -626,14 +626,6 @@ export function ResearchAdmin({
       {active === "summary" && (
         <section className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <Card label="登録店舗" value={metrics.total} tone="text-gold" />
-          <Card label="旧AI調査待ち" value={metrics.pending} />
-          <Card label="旧レビュー待ち" value={metrics.draft} />
-          <Card
-            label="旧承認済み"
-            value={metrics.approved}
-            tone="text-emerald-400"
-          />
-          <Card label="却下" value={metrics.rejected} />
           <Card label="Google評価未登録" value={metrics.missingRating} />
           <Card label="公式サイト未登録" value={metrics.missingWebsite} />
           <Card label="写真未登録" value={metrics.missingPhoto} />
