@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { isResearchAdminRequest } from "@/lib/research-admin-auth";
-import { buildTrainingClassificationText, classificationSourceHash } from "@/lib/shop-classification";
+import { classificationSourceHash } from "@/lib/shop-classification";
 import { supabaseAdmin } from "@/lib/supabase";
 
 export const runtime = "nodejs";
@@ -34,12 +34,7 @@ function normalizeText(value: unknown): string {
 }
 
 function buildClassificationText(shop: ShopRow) {
-  return buildTrainingClassificationText({
-    name: normalizeText(shop.name),
-    description: normalizeText(shop.shop_description),
-    representativeMenu: normalizeText(shop.representative_menu),
-    reviewSummary: normalizeText(shop.review_summary),
-  });
+  return normalizeText(shop.name);
 }
 
 function csv(value: string) {

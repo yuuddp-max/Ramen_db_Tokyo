@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { buildTrainingClassificationText, classificationSourceHash, SOUP_CATEGORIES, STYLE_CATEGORIES } from "@/lib/shop-classification";
+import { classificationSourceHash, SOUP_CATEGORIES, STYLE_CATEGORIES } from "@/lib/shop-classification";
 import { isResearchAdminRequest } from "@/lib/research-admin-auth";
 import { supabaseAdmin } from "@/lib/supabase";
 
@@ -25,12 +25,7 @@ function normalize(value: unknown) {
 }
 
 function predictionText(shop: ShopRow) {
-  return buildTrainingClassificationText({
-    name: normalize(shop.name),
-    description: normalize(shop.shop_description),
-    representativeMenu: normalize(shop.representative_menu),
-    reviewSummary: normalize(shop.review_summary),
-  });
+  return normalize(shop.name);
 }
 
 function parseCsv(text: string) {
