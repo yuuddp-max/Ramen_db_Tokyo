@@ -74,6 +74,7 @@ export async function POST(request: NextRequest) {
   const { data: shops, error: shopError } = await supabaseAdmin.from("ramen_shops").select("id,place_id,name,address,genres,shop_description,representative_menu,review_summary").eq("is_excluded", false).limit(20_000);
   if (shopError) return NextResponse.json({ error: shopError.message }, { status: 500 });
   const byId = new Map((shops ?? []).flatMap((shop) => [[shop.id, shop], [shop.place_id, shop]]));
+  const byName = new Map((shops ?? []).map((shop) => [normalize(shop.name), shop]));
   const byHash = new Map((shops ?? []).map((shop) => [classificationSourceHash(predictionText(shop as ShopRow)), shop]));
   let updated = 0;
   const skipped: string[] = [];
@@ -86,14 +87,14 @@ export async function POST(request: NextRequest) {
     const soup = value(row, "soup_category");
     const style = value(row, "style_category");
     const sourceHash = text ? classificationSourceHash(text) : "";
-    const shop = byId.get(id) ?? byHash.get(suppliedSourceHash || sourceHash);
+    const shop = byId.get(id) ?? byName.get(normalize(text)) ?? byHash.get(suppliedSourceHash || sourceHash);
     const missing: string[] = [];
     if (!id) missing.push("id");
     if (!text) missing.push("classification_text");
     if (!soup) missing.push("soup_category");
     if (!style) missing.push("style_category");
     if (missing.length) { skipped.push(`行${index + 2}: ${missing.join(", ")} が未入力です`); continue; }
-    if (!shop) { skipped.push(`行${index + 2}: idに一致する店舗がありません`); continue; }
+    if (!shop) { skipped.push(`行${index + 2}: idまたは店舗名に一致する店舗がありません`); continue; }
     if (suppliedSourceHash && suppliedSourceHash !== sourceHash) { skipped.push(`行${index + 2}: source_hashがclassification_textと一致しません`); continue; }
     if (!SOUP_CATEGORIES.includes(soup as (typeof SOUP_CATEGORIES)[number]) || !STYLE_CATEGORIES.includes(style as (typeof STYLE_CATEGORIES)[number])) { skipped.push(`行${index + 2}: 分類値が不正`); continue; }
     const now = new Date().toISOString();
