@@ -7,6 +7,10 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
+function matchKey(value: string | null | undefined) {
+  return (value ?? "").normalize("NFKC").toLocaleLowerCase("ja-JP").replace(/[\s　・･.,，。、()（）「」『』【】\[\]]/g, "").trim();
+}
+
 export async function POST(request: NextRequest) {
   if (!isResearchAdminRequest(request)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   if (!supabaseAdmin) return NextResponse.json({ error: "Supabase service role is not configured." }, { status: 500 });
@@ -32,12 +36,18 @@ export async function POST(request: NextRequest) {
     const candidates = shops.filter((shop) => !matchesExcludeKeyword(shop));
     if (!candidates.length) return NextResponse.json({ imported: 0, found: shops.length, skippedExisting: 0, excludedByKeyword, message: `除外キーワードに一致する${excludedByKeyword}件を除外しました。` });
 
-    const placeIds = candidates.map((shop) => shop.place_id);
-    const { data: existing, error: selectError } = await supabaseAdmin.from("ramen_shops").select("place_id").in("place_id", placeIds);
-    if (selectError) throw selectError;
-    const existingPlaceIds = new Set((existing ?? []).map((shop) => shop.place_id));
+    const existing: { place_id: string; name: string | null; address: string | null }[] = [];
+    for (let from = 0; ; from += 1000) {
+      const { data, error } = await supabaseAdmin.from("ramen_shops").select("place_id,name,address").range(from, from + 999);
+      if (error) throw error;
+      existing.push(...(data ?? []));
+      if (!data || data.length < 1000) break;
+    }
+    const existingPlaceIds = new Set(existing.map((shop) => shop.place_id));
+    const existingNames = new Set(existing.map((shop) => matchKey(shop.name)));
+    const existingAddresses = new Set(existing.map((shop) => matchKey(shop.address)));
     const newShops = candidates
-      .filter((shop) => !existingPlaceIds.has(shop.place_id))
+      .filter((shop) => !existingPlaceIds.has(shop.place_id) && !existingNames.has(matchKey(shop.name)) && !existingAddresses.has(matchKey(shop.address)))
       .map((shop) => ({ ...shop, google_place_id: shop.place_id }));
     if (!newShops.length) return NextResponse.json({ imported: 0, found: shops.length, skippedExisting: candidates.length, excludedByKeyword, message: `検索結果${candidates.length}件はすべて登録済みでした。${excludedByKeyword ? `（除外${excludedByKeyword}件）` : ""}` });
 
