@@ -69,7 +69,7 @@ export async function POST(request: NextRequest) {
   const parsed = parseCsv((await file.text()).replace(/^\uFEFF/, ""));
   if (parsed.length < 2) return NextResponse.json({ error: "CSVにデータ行がありません。" }, { status: 400 });
   const header = parsed[0].map((item) => normalize(item).toLowerCase());
-  const requiredHeaders = ["classification_text", "source_hash", "soup_category", "style_category"];
+  const requiredHeaders = ["id", "classification_text", "source_hash", "soup_category", "style_category"];
   const missingHeaders = requiredHeaders.filter((required) => !header.includes(required));
   if (missingHeaders.length) {
     return NextResponse.json({ error: `CSVのヘッダーが不正です。必要な列: ${requiredHeaders.join(",")}` }, { status: 400 });
@@ -78,18 +78,20 @@ export async function POST(request: NextRequest) {
 
   const { data: shops, error: shopError } = await supabaseAdmin.from("ramen_shops").select("id,place_id,name,address,genres,shop_description,representative_menu,review_summary").eq("is_excluded", false).limit(20_000);
   if (shopError) return NextResponse.json({ error: shopError.message }, { status: 500 });
+  const byId = new Map((shops ?? []).flatMap((shop) => [[shop.id, shop], [shop.place_id, shop]]));
   const byHash = new Map((shops ?? []).map((shop) => [classificationSourceHash(predictionText(shop as ShopRow)), shop]));
   let updated = 0;
   const skipped: string[] = [];
   const errors: string[] = [];
   for (let index = 0; index < rows.length; index += 1) {
     const row = rows[index];
+    const id = value(row, "id");
     const text = value(row, "classification_text");
     const sourceHash = value(row, "source_hash");
     const soup = value(row, "soup_category");
     const style = value(row, "style_category");
-    const shop = byHash.get(sourceHash);
-    if (!shop || !text || !sourceHash || !soup || !style) { skipped.push(`行${index + 2}: テキスト/ハッシュ/分類が不足、または店舗を特定できません`); continue; }
+    const shop = byId.get(id) ?? byHash.get(sourceHash);
+    if (!shop || !id || !text || !sourceHash || !soup || !style) { skipped.push(`行${index + 2}: ID/テキスト/ハッシュ/分類が不足、または店舗を特定できません`); continue; }
     if (classificationSourceHash(text) !== sourceHash) { skipped.push(`行${index + 2}: source_hashがclassification_textと一致しません`); continue; }
     if (!SOUP_CATEGORIES.includes(soup as (typeof SOUP_CATEGORIES)[number]) || !STYLE_CATEGORIES.includes(style as (typeof STYLE_CATEGORIES)[number])) { skipped.push(`行${index + 2}: 分類値が不正`); continue; }
     const now = new Date().toISOString();
