@@ -66,6 +66,11 @@ export function MapView({ shops, selected, currentLocation, radiusMeters, focusC
         position: { lat: currentLocation.latitude, lng: currentLocation.longitude }, map, title: "現在地", zIndex: 10,
         icon: { path: googleMaps.SymbolPath.CIRCLE, scale: 8, fillColor: "#e4ad42", fillOpacity: 1, strokeColor: "#111111", strokeWeight: 2 },
       }) : null;
+      // Use the standard Google Maps pin for the shop on the detail page.
+      // Search results keep the lightweight data-layer dots for performance.
+      const selectedShopMarker = selected ? new googleMaps.Marker({
+        position: { lat: selected.latitude, lng: selected.longitude }, map, title: selected.name, zIndex: 20,
+      }) : null;
       const radiusCircle = currentLocation && radiusMeters ? new googleMaps.Circle({
         center: { lat: currentLocation.latitude, lng: currentLocation.longitude },
         radius: radiusMeters,
@@ -83,6 +88,7 @@ export function MapView({ shops, selected, currentLocation, radiusMeters, focusC
         map.data.forEach((feature: any) => map.data.remove(feature));
         infoWindow.close();
         currentLocationMarker?.setMap(null);
+        selectedShopMarker?.setMap(null);
         radiusCircle?.setMap(null);
       };
     };
