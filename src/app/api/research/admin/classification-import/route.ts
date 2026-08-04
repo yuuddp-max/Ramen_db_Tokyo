@@ -21,7 +21,13 @@ type ShopRow = {
 };
 
 function normalize(value: unknown) {
-  return typeof value === "string" ? value.normalize("NFKC").replace(/\s+/g, " ").trim() : "";
+  return typeof value === "string"
+    ? value.replace(/^\uFEFF/, "").replace(/[\u200B-\u200D\u2060]/g, "").replace(/^'+|'+$/g, "").normalize("NFKC").replace(/\s+/g, " ").trim()
+    : "";
+}
+
+function matchKey(value: unknown) {
+  return normalize(value).toLocaleLowerCase("ja-JP").replace(/[\s　・･.,，、「」『』（）()［］\[\]【】「」]/g, "");
 }
 
 function predictionText(shop: ShopRow) {
@@ -72,15 +78,30 @@ export async function POST(request: NextRequest) {
   const rows = parsed.slice(1).slice(0, MAX_ROWS).map((cells) => Object.fromEntries(header.map((key, index) => [key, cells[index] ?? ""])));
 
   const { data: shops, error: shopError } = await supabaseAdmin.from("ramen_shops").select("id,place_id,name,address,genres,shop_description,representative_menu,review_summary").eq("is_excluded", false).limit(20_000);
+  const { data: allShops, error: allShopError } = await supabaseAdmin.from("ramen_shops").select("id,place_id,name,address,genres,shop_description,representative_menu,review_summary").limit(20_000);
   if (shopError) return NextResponse.json({ error: shopError.message }, { status: 500 });
-  const byId = new Map((shops ?? []).flatMap((shop) => [[shop.id, shop], [shop.place_id, shop]]));
-  const byName = new Map((shops ?? []).map((shop) => [normalize(shop.name), shop]));
-  const byHash = new Map((shops ?? []).map((shop) => [classificationSourceHash(predictionText(shop as ShopRow)), shop]));
+  if (allShopError) return NextResponse.json({ error: allShopError.message }, { status: 500 });
+  const matchShops = allShops ?? shops ?? [];
+  const byId = new Map(matchShops.flatMap((shop) => [[shop.id, shop], [shop.place_id, shop]]));
+  const byName = new Map(matchShops.map((shop) => [matchKey(shop.name), shop]));
+  const byHash = new Map(matchShops.map((shop) => [classificationSourceHash(predictionText(shop as ShopRow)), shop]));
+  const findByPartialId = (id: string) => {
+    if (!id) return undefined;
+    const normalizedId = id.replace(/^'+/, "").trim();
+    const matches = matchShops.filter((shop) => {
+      const shopId = normalize(shop.id);
+      const placeId = normalize(shop.place_id);
+      return shopId === normalizedId || placeId === normalizedId || shopId.startsWith(normalizedId) || placeId.startsWith(normalizedId);
+    });
+    return matches.length === 1 ? matches[0] : undefined;
+  };
   const findByLegacyText = (text: string) => {
     const normalizedText = normalize(text);
-    return (shops ?? []).find((shop) => {
+    const key = matchKey(normalizedText);
+    return matchShops.find((shop) => {
       const name = normalize(shop.name);
-      return Boolean(name && (normalizedText === name || normalizedText.startsWith(`${name} `)));
+      const nameKey = matchKey(name);
+      return Boolean(name && (key === nameKey || key.startsWith(nameKey)));
     });
   };
   let updated = 0;
@@ -93,7 +114,7 @@ export async function POST(request: NextRequest) {
     const suppliedSourceHash = value(row, "source_hash");
     const soup = value(row, "soup_category");
     const style = value(row, "style_category");
-    const shop = byId.get(id) ?? byName.get(normalize(text)) ?? findByLegacyText(text) ?? byHash.get(suppliedSourceHash);
+    const shop = byId.get(id) ?? findByPartialId(id) ?? byName.get(matchKey(text)) ?? findByLegacyText(text) ?? byHash.get(suppliedSourceHash);
     const missing: string[] = [];
     if (!id) missing.push("id");
     if (!text) missing.push("classification_text");
