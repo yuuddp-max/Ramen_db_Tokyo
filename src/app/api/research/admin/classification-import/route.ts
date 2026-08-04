@@ -64,7 +64,7 @@ export async function POST(request: NextRequest) {
   const parsed = parseCsv((await file.text()).replace(/^\uFEFF/, ""));
   if (parsed.length < 2) return NextResponse.json({ error: "CSVにデータ行がありません。" }, { status: 400 });
   const header = parsed[0].map((item) => normalize(item).toLowerCase());
-  const requiredHeaders = ["id", "classification_text", "source_hash", "soup_category", "style_category"];
+  const requiredHeaders = ["id", "classification_text", "soup_category", "style_category"];
   const missingHeaders = requiredHeaders.filter((required) => !header.includes(required));
   if (missingHeaders.length) {
     return NextResponse.json({ error: `CSVのヘッダーが不正です。必要な列: ${requiredHeaders.join(",")}` }, { status: 400 });
@@ -82,19 +82,19 @@ export async function POST(request: NextRequest) {
     const row = rows[index];
     const id = value(row, "id");
     const text = value(row, "classification_text");
-    const sourceHash = value(row, "source_hash");
+    const suppliedSourceHash = value(row, "source_hash");
     const soup = value(row, "soup_category");
     const style = value(row, "style_category");
-    const shop = byId.get(id) ?? byHash.get(sourceHash);
+    const sourceHash = text ? classificationSourceHash(text) : "";
+    const shop = byId.get(id) ?? byHash.get(suppliedSourceHash || sourceHash);
     const missing: string[] = [];
     if (!id) missing.push("id");
     if (!text) missing.push("classification_text");
-    if (!sourceHash) missing.push("source_hash");
     if (!soup) missing.push("soup_category");
     if (!style) missing.push("style_category");
     if (missing.length) { skipped.push(`行${index + 2}: ${missing.join(", ")} が未入力です`); continue; }
     if (!shop) { skipped.push(`行${index + 2}: idに一致する店舗がありません`); continue; }
-    if (classificationSourceHash(text) !== sourceHash) { skipped.push(`行${index + 2}: source_hashがclassification_textと一致しません`); continue; }
+    if (suppliedSourceHash && suppliedSourceHash !== sourceHash) { skipped.push(`行${index + 2}: source_hashがclassification_textと一致しません`); continue; }
     if (!SOUP_CATEGORIES.includes(soup as (typeof SOUP_CATEGORIES)[number]) || !STYLE_CATEGORIES.includes(style as (typeof STYLE_CATEGORIES)[number])) { skipped.push(`行${index + 2}: 分類値が不正`); continue; }
     const now = new Date().toISOString();
     const { error } = await supabaseAdmin.from("ramen_shops").update({
