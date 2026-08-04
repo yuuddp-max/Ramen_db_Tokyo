@@ -86,7 +86,14 @@ export async function POST(request: NextRequest) {
     const soup = value(row, "soup_category");
     const style = value(row, "style_category");
     const shop = byId.get(id) ?? byHash.get(sourceHash);
-    if (!shop || !id || !text || !sourceHash || !soup || !style) { skipped.push(`行${index + 2}: ID/テキスト/ハッシュ/分類が不足、または店舗を特定できません`); continue; }
+    const missing: string[] = [];
+    if (!id) missing.push("id");
+    if (!text) missing.push("classification_text");
+    if (!sourceHash) missing.push("source_hash");
+    if (!soup) missing.push("soup_category");
+    if (!style) missing.push("style_category");
+    if (missing.length) { skipped.push(`行${index + 2}: ${missing.join(", ")} が未入力です`); continue; }
+    if (!shop) { skipped.push(`行${index + 2}: idに一致する店舗がありません`); continue; }
     if (classificationSourceHash(text) !== sourceHash) { skipped.push(`行${index + 2}: source_hashがclassification_textと一致しません`); continue; }
     if (!SOUP_CATEGORIES.includes(soup as (typeof SOUP_CATEGORIES)[number]) || !STYLE_CATEGORIES.includes(style as (typeof STYLE_CATEGORIES)[number])) { skipped.push(`行${index + 2}: 分類値が不正`); continue; }
     const now = new Date().toISOString();

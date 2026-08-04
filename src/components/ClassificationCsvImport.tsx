@@ -34,7 +34,7 @@ export function ClassificationCsvImport() {
       <div className="mt-5 rounded-xl border border-gold/40 bg-amber-50 p-4 text-sm text-stone-800">
         <p className="font-bold text-stone-900">CSVに必要な列</p>
         <code className="mt-2 block overflow-x-auto text-xs">id,classification_text,source_hash,soup_category,style_category</code>
-        <p className="mt-2">idで店舗を特定し、店舗名とSHA-256ハッシュが一致する行だけを取り込みます。</p>
+        <p className="mt-2">CSV出力直後は分類欄が空欄です。ローカル環境で soup_category と style_category を入力してから取り込んでください。idで店舗を特定し、店舗名とSHA-256ハッシュが一致する行だけを登録します。</p>
       </div>
       <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center">
         <label className="inline-flex cursor-pointer items-center rounded-xl border border-gold px-4 py-2 text-sm font-bold text-gold disabled:opacity-50">
