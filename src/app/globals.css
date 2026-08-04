@@ -35,6 +35,5 @@ select.bg-black option { background: #000; color: #fff; }
 .scrollbar-none::-webkit-scrollbar { display: none; }
 :focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
 input[placeholder*="店名"]:focus, input[placeholder*="店名"]:focus-visible { outline: none !important; box-shadow: none !important; }
-/* The list/map switch is retired; map and list are shown together. */
 main .flex.rounded-lg.border.border-border.bg-white.p-1 { display: none; }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; } }
