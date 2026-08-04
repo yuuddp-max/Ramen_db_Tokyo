@@ -86,9 +86,10 @@ export async function POST(request: NextRequest) {
   const parsed = parseCsv((await file.text()).replace(/^\uFEFF/, ""));
   if (parsed.length < 2) return NextResponse.json({ error: "CSVにデータ行がありません。" }, { status: 400 });
   const header = parsed[0].map((item) => normalize(item).toLowerCase());
-  const requiredHeaders = ["id", "classification_text", "soup_category", "style_category"];
-  const missingHeaders = requiredHeaders.filter((required) => !header.includes(required));
-  if (missingHeaders.length) {
+  const requiredHeaders = ["id", "name", "soup_category", "style_category"];
+  const hasNameColumn = header.includes("name") || header.includes("classification_text");
+  const missingHeaders = ["id", "soup_category", "style_category"].filter((required) => !header.includes(required));
+  if (!hasNameColumn || missingHeaders.length) {
     return NextResponse.json({ error: `CSVのヘッダーが不正です。必要な列: ${requiredHeaders.join(",")}` }, { status: 400 });
   }
   const rows = parsed.slice(1).slice(0, MAX_ROWS).map((cells) => Object.fromEntries(header.map((key, index) => [key, cells[index] ?? ""])));
@@ -126,14 +127,14 @@ export async function POST(request: NextRequest) {
   for (let index = 0; index < rows.length; index += 1) {
     const row = rows[index];
     const id = value(row, "id");
-    const text = value(row, "classification_text");
+    const text = value(row, "name", "classification_text");
     const suppliedSourceHash = value(row, "source_hash");
     const soup = normalizeSoupCategory(value(row, "soup_category"));
     const style = normalizeStyleCategory(value(row, "style_category"));
     const shop = byId.get(id) ?? findByPartialId(id) ?? byName.get(matchKey(text)) ?? findByLegacyText(text) ?? byHash.get(suppliedSourceHash);
     const missing: string[] = [];
     if (!id) missing.push("id");
-    if (!text) missing.push("classification_text");
+    if (!text) missing.push("name");
     if (!soup) missing.push("soup_category");
     if (!style) missing.push("style_category");
     if (missing.length) { skipped.push(`行${index + 2}: ${missing.join(", ")} が未入力です`); continue; }
