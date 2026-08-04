@@ -75,6 +75,21 @@ function value(row: Record<string, string>, ...keys: string[]) {
   return "";
 }
 
+async function fetchAllMatchShops() {
+  const shops: ShopRow[] = [];
+  const pageSize = 1_000;
+  for (let from = 0; ; from += pageSize) {
+    const { data, error } = await supabaseAdmin!
+      .from("ramen_shops")
+      .select("id,place_id,name,address,genres,shop_description,representative_menu,review_summary")
+      .range(from, from + pageSize - 1);
+    if (error) throw new Error(error.message);
+    shops.push(...((data ?? []) as ShopRow[]));
+    if (!data || data.length < pageSize) break;
+  }
+  return shops;
+}
+
 export async function POST(request: NextRequest) {
   if (!isResearchAdminRequest(request)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   if (!supabaseAdmin) return NextResponse.json({ error: "Supabase service role is not configured." }, { status: 500 });
@@ -94,11 +109,12 @@ export async function POST(request: NextRequest) {
   }
   const rows = parsed.slice(1).slice(0, MAX_ROWS).map((cells) => Object.fromEntries(header.map((key, index) => [key, cells[index] ?? ""])));
 
-  const { data: shops, error: shopError } = await supabaseAdmin.from("ramen_shops").select("id,place_id,name,address,genres,shop_description,representative_menu,review_summary").eq("is_excluded", false).limit(20_000);
-  const { data: allShops, error: allShopError } = await supabaseAdmin.from("ramen_shops").select("id,place_id,name,address,genres,shop_description,representative_menu,review_summary").limit(20_000);
-  if (shopError) return NextResponse.json({ error: shopError.message }, { status: 500 });
-  if (allShopError) return NextResponse.json({ error: allShopError.message }, { status: 500 });
-  const matchShops = allShops ?? shops ?? [];
+  let matchShops: ShopRow[];
+  try {
+    matchShops = await fetchAllMatchShops();
+  } catch (error) {
+    return NextResponse.json({ error: error instanceof Error ? error.message : "店舗データの取得に失敗しました" }, { status: 500 });
+  }
   const normalizeId = (value: unknown) => normalize(value).toLowerCase();
   const byId = new Map(matchShops.flatMap((shop) => [[normalizeId(shop.id), shop], [normalizeId(shop.place_id), shop]]));
   const byName = new Map(matchShops.map((shop) => [matchKey(shop.name), shop]));
