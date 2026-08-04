@@ -76,6 +76,13 @@ export async function POST(request: NextRequest) {
   const byId = new Map((shops ?? []).flatMap((shop) => [[shop.id, shop], [shop.place_id, shop]]));
   const byName = new Map((shops ?? []).map((shop) => [normalize(shop.name), shop]));
   const byHash = new Map((shops ?? []).map((shop) => [classificationSourceHash(predictionText(shop as ShopRow)), shop]));
+  const findByLegacyText = (text: string) => {
+    const normalizedText = normalize(text);
+    return (shops ?? []).find((shop) => {
+      const name = normalize(shop.name);
+      return Boolean(name && (normalizedText === name || normalizedText.startsWith(`${name} `)));
+    });
+  };
   let updated = 0;
   const skipped: string[] = [];
   const errors: string[] = [];
@@ -86,8 +93,7 @@ export async function POST(request: NextRequest) {
     const suppliedSourceHash = value(row, "source_hash");
     const soup = value(row, "soup_category");
     const style = value(row, "style_category");
-    const sourceHash = text ? classificationSourceHash(text) : "";
-    const shop = byId.get(id) ?? byName.get(normalize(text)) ?? byHash.get(suppliedSourceHash || sourceHash);
+    const shop = byId.get(id) ?? byName.get(normalize(text)) ?? findByLegacyText(text) ?? byHash.get(suppliedSourceHash);
     const missing: string[] = [];
     if (!id) missing.push("id");
     if (!text) missing.push("classification_text");
@@ -95,6 +101,8 @@ export async function POST(request: NextRequest) {
     if (!style) missing.push("style_category");
     if (missing.length) { skipped.push(`行${index + 2}: ${missing.join(", ")} が未入力です`); continue; }
     if (!shop) { skipped.push(`行${index + 2}: idまたは店舗名に一致する店舗がありません`); continue; }
+    const canonicalText = normalize(shop.name);
+    const sourceHash = classificationSourceHash(canonicalText);
     if (suppliedSourceHash && suppliedSourceHash !== sourceHash) { skipped.push(`行${index + 2}: source_hashがclassification_textと一致しません`); continue; }
     if (!SOUP_CATEGORIES.includes(soup as (typeof SOUP_CATEGORIES)[number]) || !STYLE_CATEGORIES.includes(style as (typeof STYLE_CATEGORIES)[number])) { skipped.push(`行${index + 2}: 分類値が不正`); continue; }
     const now = new Date().toISOString();
@@ -105,7 +113,7 @@ export async function POST(request: NextRequest) {
       researched_soup_type: soup, researched_style: style, research_confidence: "high", research_status: "approved", research_updated_at: now,
     }).eq("id", shop.id);
     if (error) { errors.push(`行${index + 2}: ${error.message}`); continue; }
-    const { error: trainingError } = await supabaseAdmin.from("classification_training_examples").upsert({ shop_id: shop.id, classification_text: text, source_hash: sourceHash, soup_category: soup, style_category: style }, { onConflict: "shop_id,source_hash,soup_category,style_category" });
+    const { error: trainingError } = await supabaseAdmin.from("classification_training_examples").upsert({ shop_id: shop.id, classification_text: canonicalText, source_hash: sourceHash, soup_category: soup, style_category: style }, { onConflict: "shop_id,source_hash,soup_category,style_category" });
     if (trainingError) { errors.push(`行${index + 2}: 教師データ保存失敗`); continue; }
     updated += 1;
   }
