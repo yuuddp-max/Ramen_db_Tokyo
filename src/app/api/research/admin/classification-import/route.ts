@@ -117,6 +117,9 @@ export async function POST(request: NextRequest) {
   }
   const normalizeId = (value: unknown) => normalize(value).toLowerCase();
   const byId = new Map(matchShops.flatMap((shop) => [[normalizeId(shop.id), shop], [normalizeId(shop.place_id), shop]]));
+  const byNameAddress = new Map(matchShops
+    .filter((shop) => shop.name && shop.address)
+    .map((shop) => [`${matchKey(shop.name)}::${matchKey(shop.address)}`, shop]));
   const byName = new Map(matchShops.map((shop) => [matchKey(shop.name), shop]));
   const byHash = new Map(matchShops.map((shop) => [classificationSourceHash(predictionText(shop as ShopRow)), shop]));
   const findByPartialId = (id: string) => {
@@ -145,10 +148,12 @@ export async function POST(request: NextRequest) {
     const row = rows[index];
     const id = value(row, "id");
     const text = value(row, "name", "classification_text");
+    const address = value(row, "address");
     const suppliedSourceHash = value(row, "source_hash");
     const soup = normalizeSoupCategory(value(row, "soup_category"));
     const style = normalizeStyleCategory(value(row, "style_category"));
-    const shop = byId.get(normalizeId(id)) ?? findByPartialId(id) ?? byName.get(matchKey(text)) ?? findByLegacyText(text) ?? byHash.get(suppliedSourceHash);
+    const nameAddressKey = text && address ? `${matchKey(text)}::${matchKey(address)}` : "";
+    const shop = byId.get(normalizeId(id)) ?? findByPartialId(id) ?? (nameAddressKey ? byNameAddress.get(nameAddressKey) : undefined) ?? byName.get(matchKey(text)) ?? findByLegacyText(text) ?? byHash.get(suppliedSourceHash);
     const missing: string[] = [];
     if (!id) missing.push("id");
     if (!text) missing.push("name");

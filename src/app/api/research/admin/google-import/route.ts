@@ -23,7 +23,9 @@ export async function POST(request: NextRequest) {
     const { data: existing, error: selectError } = await supabaseAdmin.from("ramen_shops").select("place_id").in("place_id", placeIds);
     if (selectError) throw selectError;
     const existingPlaceIds = new Set((existing ?? []).map((shop) => shop.place_id));
-    const newShops = shops.filter((shop) => !existingPlaceIds.has(shop.place_id));
+    const newShops = shops
+      .filter((shop) => !existingPlaceIds.has(shop.place_id))
+      .map((shop) => ({ ...shop, google_place_id: shop.place_id }));
     if (!newShops.length) return NextResponse.json({ imported: 0, skippedExisting: shops.length, message: "検索結果はすべて登録済みでした。" });
 
     const { data: inserted, error: insertError } = await supabaseAdmin.from("ramen_shops").insert(newShops).select("place_id");

@@ -4,6 +4,8 @@ create extension if not exists "pgcrypto";
 create table if not exists public.ramen_shops (
   id uuid primary key default gen_random_uuid(),
   place_id text not null unique,
+  -- Canonical Google Places identifier used by external CSV/integration tools.
+  google_place_id text,
   name text not null,
   address text,
   latitude double precision not null,

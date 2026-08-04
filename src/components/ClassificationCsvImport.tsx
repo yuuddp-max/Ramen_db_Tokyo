@@ -33,8 +33,8 @@ export function ClassificationCsvImport() {
       <p className="mt-3 max-w-3xl text-sm leading-6 text-stone-700">「ローカル分類用CSV」をPC上の分類モデルで修正した後、CSVを選択して登録します。登録された分類は手動承認済みになり、次回の教師データ出力に反映されます。</p>
       <div className="mt-5 rounded-xl border border-gold/40 bg-amber-50 p-4 text-sm text-stone-800">
         <p className="font-bold text-stone-900">CSVに必要な列</p>
-        <code className="mt-2 block overflow-x-auto text-xs">id,name,soup_category,style_category</code>
-        <p className="mt-2">id・nameは ramen_shops、分類欄は classification_training_examples の形式です。ローカル環境で soup_category と style_category を入力してから取り込んでください。旧形式の classification_text 列も読み込めます。</p>
+        <code className="mt-2 block overflow-x-auto text-xs">id,name,address,soup_category,style_category</code>
+        <p className="mt-2">id・name・addressは ramen_shops、分類欄は classification_training_examples の形式です。ローカル環境で soup_category と style_category を入力してから取り込んでください。address列がない旧形式や classification_text 列も読み込めます。</p>
       </div>
       <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center">
         <label className="inline-flex cursor-pointer items-center rounded-xl border border-gold px-4 py-2 text-sm font-bold text-gold disabled:opacity-50">

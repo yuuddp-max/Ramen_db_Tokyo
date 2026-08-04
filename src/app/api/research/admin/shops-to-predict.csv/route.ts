@@ -6,7 +6,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const PAGE_SIZE = 1000;
-const HEADER = "id,name,soup_category,style_category";
+const HEADER = "id,name,address,soup_category,style_category";
 const SCOPES = ["unclassified", "include-review", "all", "updated"] as const;
 type Scope = (typeof SCOPES)[number];
 
@@ -25,7 +25,7 @@ type ShopRow = {
 };
 
 type TrainingRow = { shop_id: string | null; soup_category: string | null; style_category: string | null; created_at: string | null };
-type PredictionRow = { id: string; name: string; soup_category: string; style_category: string; updated_at: string };
+type PredictionRow = { id: string; name: string; address: string; soup_category: string; style_category: string; updated_at: string };
 
 function normalizeText(value: unknown): string {
   if (Array.isArray(value)) return value.flatMap((item) => normalizeText(item)).join(" ");
@@ -106,6 +106,7 @@ async function collect(scope: Scope) {
     const row = {
       id: shop.id,
       name,
+      address: normalizeText(shop.address),
       soup_category: soup,
       style_category: style,
       updated_at: training?.created_at ?? shop.updated_at ?? "",
@@ -132,7 +133,7 @@ export async function GET(request: NextRequest) {
     const result = await collect(scope);
     if (request.nextUrl.searchParams.get("mode") !== "download") return NextResponse.json({ scope, stats: result.stats });
     if (!result.rows.length) return NextResponse.json({ error: "出力対象の未分類店舗はありません" }, { status: 404 });
-    const content = [HEADER, ...result.rows.map((row) => [row.id, row.name, row.soup_category, row.style_category].map(csv).join(","))].join("\r\n");
+    const content = [HEADER, ...result.rows.map((row) => [row.id, row.name, row.address, row.soup_category, row.style_category].map(csv).join(","))].join("\r\n");
     return new NextResponse(`\uFEFF${content}\r\n`, { headers: { "Content-Type": "text/csv; charset=utf-8", "Content-Disposition": 'attachment; filename="ramen_db_llst.csv"', "Cache-Control": "no-store, no-cache, must-revalidate", Pragma: "no-cache" } });
   } catch (error) {
     console.error("shops_to_predict CSV export failed", error);

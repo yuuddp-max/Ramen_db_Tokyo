@@ -35,7 +35,10 @@ export async function POST(request: NextRequest) {
       if (error) throw error;
       for (const row of data ?? []) existingPlaceIds.add(row.place_id);
     }
-    const newShops = shops.filter((shop) => !existingPlaceIds.has(shop.place_id)).slice(0, remaining);
+    const newShops = shops
+      .filter((shop) => !existingPlaceIds.has(shop.place_id))
+      .slice(0, remaining)
+      .map((shop) => ({ ...shop, google_place_id: shop.place_id }));
     if (!newShops.length) return NextResponse.json({ imported: 0, total: currentTotal ?? 0, target, message: "All returned Places are already imported. Existing shops were not changed." });
     const { data: inserted, error } = await supabaseAdmin.from("ramen_shops").insert(newShops).select("place_id");
     if (error) throw error;
