@@ -42,7 +42,7 @@ export async function GET(request: NextRequest) {
     "¥¥¥¥": ["PRICE_LEVEL_VERY_EXPENSIVE", "¥¥¥¥"],
   };
   const buildQuery = () => {
-    let builder = db.from("ramen_shops").select("*");
+    let builder = db.from("ramen_shops").select("*").eq("is_excluded", false);
     if (hasBounds) builder = builder.gte("latitude", south).lte("latitude", north).gte("longitude", west).lte("longitude", east);
     if (genre) builder = builder.contains("genres", [genre]);
     if (minRating !== null) builder = builder.gte("rating", minRating);

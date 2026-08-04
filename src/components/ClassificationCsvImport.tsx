@@ -1,0 +1,50 @@
+"use client";
+
+import { useState } from "react";
+
+export function ClassificationCsvImport() {
+  const [file, setFile] = useState<File | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState("");
+
+  const importCsv = async () => {
+    if (!file || busy) return;
+    setBusy(true);
+    setMessage("CSVを確認して分類結果を登録しています…");
+    try {
+      const form = new FormData();
+      form.set("file", file);
+      const response = await fetch("/api/research/admin/classification-import", { method: "POST", body: form });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(result.error ?? "CSVの取込に失敗しました。");
+      setMessage(`${result.updated ?? 0}件を登録しました。スキップ${result.skipped ?? 0}件、エラー${result.errors ?? 0}件。`);
+      if ((result.details ?? []).length) setMessage((current) => `${current}\n${result.details.join("\n")}`);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "CSVの取込に失敗しました。");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <section className="panel mt-8 rounded-2xl p-6 sm:p-8">
+      <p className="text-xs font-bold tracking-[.2em] text-gold">LOCAL CLASSIFICATION IMPORT</p>
+      <h2 className="mt-2 text-2xl font-black">分類結果CSVをインポート</h2>
+      <p className="mt-3 max-w-3xl text-sm leading-6 text-stone-700">「ローカル分類用CSV」をPC上の分類モデルで修正した後、CSVを選択して登録します。登録された分類は手動承認済みになり、次回の教師データ出力に反映されます。</p>
+      <div className="mt-5 rounded-xl border border-gold/40 bg-amber-50 p-4 text-sm text-stone-800">
+        <p className="font-bold text-stone-900">CSVに必要な列</p>
+        <code className="mt-2 block overflow-x-auto text-xs">id,name,address,soup_category,style_category</code>
+        <p className="mt-2">id・name・addressは ramen_shops、分類欄は classification_training_examples の形式です。ローカル環境で soup_category と style_category を入力してから取り込んでください。address列がない旧形式や classification_text 列も読み込めます。</p>
+      </div>
+      <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center">
+        <label className="inline-flex cursor-pointer items-center rounded-xl border border-gold px-4 py-2 text-sm font-bold text-gold disabled:opacity-50">
+          <input type="file" accept=".csv,text/csv" className="sr-only" onChange={(event) => setFile(event.target.files?.[0] ?? null)} />
+          ファイルを選択
+        </label>
+        <span className="text-sm text-stone-500">{file?.name ?? "選択されていません"}</span>
+        <button disabled={!file || busy} onClick={() => void importCsv()} className="shrink-0 rounded-xl bg-gold px-5 py-3 font-bold text-ink disabled:cursor-not-allowed disabled:opacity-50">{busy ? "取込中…" : "分類結果を登録"}</button>
+      </div>
+      {message && <p role="status" className="mt-4 whitespace-pre-line rounded-xl border border-gold/50 bg-amber-50 px-4 py-3 text-sm font-medium text-stone-900">{message}</p>}
+    </section>
+  );
+}

@@ -1,6 +1,7 @@
 {
   "crons": [
-    { "path": "/api/cron/research-soup", "schedule": "15 3 * * *" },
+    { "path": "/api/cron/classification-jobs", "schedule": "0 3 * * *" },
+    { "path": "/api/cron/ramen-features", "schedule": "30 2 * * *" },
     { "path": "/api/cron/web-ramen", "schedule": "0 21 * * 6" }
   ]
 }

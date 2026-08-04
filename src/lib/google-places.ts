@@ -175,7 +175,7 @@ export async function searchTokyoLocation(query: string) {
 }
 
 export async function searchTokyoRamen(query = "ラーメン") {
-  return (await searchTokyoRamenPage(query)).shops;
+  return searchTokyoRamenPages(query, 3);
 }
 
 async function searchTokyoRamenPages(query: string, maxPages = 3) {

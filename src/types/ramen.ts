@@ -28,6 +28,15 @@ export type RamenShop = {
   research_evidence_url: string | null;
   research_evidence_summary: string | null;
   research_updated_at: string | null;
+  soupCategory?: string | null;
+  styleCategory?: string | null;
+  soupConfidence?: number | null;
+  styleConfidence?: number | null;
+  classificationMethod?: "rule" | "local-model" | "generative-ai" | "manual" | null;
+  classificationStatus?: "pending" | "processing" | "auto-approved" | "needs-review" | "manually-approved" | "error" | null;
+  classificationVersion?: string | null;
+  classificationSourceHash?: string | null;
+  classifiedAt?: string | null;
   /** Server-side flag for whether the shop has a matched Tabelog Hyakumeiten award. */
   has_tabelog_hyakumeiten?: boolean;
   created_at: string;
