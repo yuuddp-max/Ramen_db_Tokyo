@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { TabelogAwardsImport } from "@/components/TabelogAwardsImport";
 import { ShopNameMaintenance } from "@/components/ShopNameMaintenance";
@@ -165,6 +165,7 @@ export function ResearchAdmin({
   const [message, setMessage] = useState("");
   const [active, setActive] = useState<Menu>("google");
   const [query, setQuery] = useState("ラーメン");
+  const [excludeKeywords, setExcludeKeywords] = useState("");
   const [manual, setManual] = useState<
     Record<string, { soup: string; style: string }>
   >({});
@@ -172,6 +173,9 @@ export function ResearchAdmin({
   const [predictionBusy, setPredictionBusy] = useState(false);
   const [predictionMessage, setPredictionMessage] = useState("");
   const [predictionStats, setPredictionStats] = useState<PredictionStats | null>(null);
+  useEffect(() => {
+    setExcludeKeywords(window.localStorage.getItem("ramen-admin-exclude-keywords") ?? "");
+  }, []);
   const request = async (url: string, options: RequestInit = {}) => {
     setBusy(true);
     setMessage("");
@@ -192,7 +196,7 @@ export function ResearchAdmin({
         );
       else if (data.imported != null)
         setMessage(
-          `Google Mapsで${data.found ?? 0}店を確認。新規${data.imported}店、登録済み${data.skippedExisting ?? 0}店をスキップしました。`,
+          `Google Mapsで${data.found ?? 0}店を確認。新規${data.imported}店、登録済み${data.skippedExisting ?? 0}店をスキップしました。${data.excludedByKeyword ? `除外キーワードで${data.excludedByKeyword}店を除外しました。` : ""}`,
         );
       else if (data.fetched != null)
         setMessage(
@@ -576,13 +580,27 @@ export function ResearchAdmin({
             onClick={() =>
               request("/api/research/admin/google-import", {
                 method: "POST",
-                body: JSON.stringify({ query }),
+                body: JSON.stringify({ query, excludeKeywords }),
               })
             }
             className="mt-4 rounded-xl bg-gold px-4 py-3 font-bold text-ink"
           >
             Google Mapsから検索・登録
           </button>
+          <label className="mt-5 block max-w-xl text-sm font-bold text-stone-700">
+            除外キーワード（カンマ・改行区切り）
+            <input
+              value={excludeKeywords}
+              onChange={(event) => {
+                const value = event.target.value;
+                setExcludeKeywords(value);
+                window.localStorage.setItem("ramen-admin-exclude-keywords", value);
+              }}
+              placeholder="例：閉店、居酒屋、焼肉"
+              className="mt-1 block w-full rounded-xl border border-stone-300 bg-white px-4 py-3 font-normal text-stone-900"
+            />
+            <span className="mt-1 block font-normal text-stone-500">店舗名・住所・Googleのジャンルに含まれる店舗を登録前に除外します。</span>
+          </label>
         </section>
       )}
       {active === "webposts" && (
