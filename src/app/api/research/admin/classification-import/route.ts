@@ -99,15 +99,16 @@ export async function POST(request: NextRequest) {
   if (shopError) return NextResponse.json({ error: shopError.message }, { status: 500 });
   if (allShopError) return NextResponse.json({ error: allShopError.message }, { status: 500 });
   const matchShops = allShops ?? shops ?? [];
-  const byId = new Map(matchShops.flatMap((shop) => [[shop.id, shop], [shop.place_id, shop]]));
+  const normalizeId = (value: unknown) => normalize(value).toLowerCase();
+  const byId = new Map(matchShops.flatMap((shop) => [[normalizeId(shop.id), shop], [normalizeId(shop.place_id), shop]]));
   const byName = new Map(matchShops.map((shop) => [matchKey(shop.name), shop]));
   const byHash = new Map(matchShops.map((shop) => [classificationSourceHash(predictionText(shop as ShopRow)), shop]));
   const findByPartialId = (id: string) => {
     if (!id) return undefined;
-    const normalizedId = id.replace(/^'+/, "").trim();
+    const normalizedId = normalizeId(id);
     const matches = matchShops.filter((shop) => {
-      const shopId = normalize(shop.id);
-      const placeId = normalize(shop.place_id);
+      const shopId = normalizeId(shop.id);
+      const placeId = normalizeId(shop.place_id);
       return shopId === normalizedId || placeId === normalizedId || shopId.startsWith(normalizedId) || placeId.startsWith(normalizedId);
     });
     return matches.length === 1 ? matches[0] : undefined;
@@ -131,7 +132,7 @@ export async function POST(request: NextRequest) {
     const suppliedSourceHash = value(row, "source_hash");
     const soup = normalizeSoupCategory(value(row, "soup_category"));
     const style = normalizeStyleCategory(value(row, "style_category"));
-    const shop = byId.get(id) ?? findByPartialId(id) ?? byName.get(matchKey(text)) ?? findByLegacyText(text) ?? byHash.get(suppliedSourceHash);
+    const shop = byId.get(normalizeId(id)) ?? findByPartialId(id) ?? byName.get(matchKey(text)) ?? findByLegacyText(text) ?? byHash.get(suppliedSourceHash);
     const missing: string[] = [];
     if (!id) missing.push("id");
     if (!text) missing.push("name");
