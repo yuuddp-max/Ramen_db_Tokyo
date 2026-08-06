@@ -35,6 +35,6 @@ select.bg-black option { background: #000; color: #fff; }
 .scrollbar-none::-webkit-scrollbar { display: none; }
 :focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
 input[placeholder*="店名"]:focus, input[placeholder*="店名"]:focus-visible { outline: none !important; box-shadow: none !important; }
-main > div.mb-4 > span:last-child:not(:empty) { color: var(--color-primary) !important; font-weight: 800 !important; }
+main > div.mb-4 > span:last-child:not(:empty) { display: none; }
 main .flex.rounded-lg.border.border-border.bg-white.p-1 { display: none; }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; } }
