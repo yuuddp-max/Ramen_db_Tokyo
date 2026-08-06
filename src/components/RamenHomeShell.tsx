@@ -40,9 +40,9 @@ export function RamenHomeShell({ initialShops, initialTotal, posts }: { initialS
   const changeMode = (nextMode: Mode) => { setMode(nextMode); updateUrl({ mode: nextMode }); window.scrollTo({ top: 0, behavior: "smooth" }); };
   const changeCategory = (next: string) => { setCategory(next); setMode("news"); updateUrl({ mode: "news", category: next }); };
   const submitSearch = (event: FormEvent) => { event.preventDefault(); const next = queryInput.trim(); setQuery(next); setMode("shops"); updateUrl({ mode: "shops", q: next || null }); };
-  const changeSoup = (next: string) => { setSoup(next === "all" ? "" : next.replace(/^soup:/, "")); setArea("all"); setMode("shops"); updateUrl({ mode: "shops", soup: next === "all" ? null : next.replace(/^soup:/, ""), q: null, area: null }); };
+  const changeSoup = (next: string) => { const nextSoup = next === "all" ? "" : next.replace(/^soup:/, ""); setSoup(nextSoup); setMode("shops"); updateUrl({ mode: "shops", soup: nextSoup || null, q: area !== "all" && area !== "現在地周辺" ? area : null, area: area !== "all" ? area : null }); };
   const changeStyle = (next: string) => { setStyle(next === "all" ? "" : next.replace(/^style:/, "")); setArea("all"); setMode("shops"); updateUrl({ mode: "shops", style: next === "all" ? null : next.replace(/^style:/, ""), q: null, area: null }); };
-  const changeArea = (next: string) => { setArea(next); setSoup(""); setStyle(""); setMode("shops"); updateUrl({ mode: "shops", area: next === "all" ? null : next, soup: null, style: null, q: next === "all" || next === "現在地周辺" ? null : next }); };
+  const changeArea = (next: string) => { setArea(next); setMode("shops"); updateUrl({ mode: "shops", area: next === "all" ? null : next, soup: soup || null, style: style || null, q: next === "all" || next === "現在地周辺" ? null : next }); };
   const toggleOpenOnly = () => { const next = !openOnly; setOpenOnly(next); setMode("shops"); updateUrl({ mode: "shops", open: next ? "1" : null }); };
   const shopKey = `${mode}-${query}-${soup}-${style}-${area}-${openOnly}`;
   return <div className="min-h-screen pb-16 md:pb-0">
