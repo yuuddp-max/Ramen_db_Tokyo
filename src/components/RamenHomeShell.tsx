@@ -18,7 +18,7 @@ const NEWS_CATEGORIES: HorizontalTab[] = [
 ];
 const SHOP_GENRES: HorizontalTab[] = [{ id: "all", label: "すべて" }, ...RAMEN_SOUPS.map((item) => ({ id: `soup:${item.label}`, label: item.label }))];
 const SHOP_STYLES: HorizontalTab[] = [{ id: "all", label: "すべて" }, ...RAMEN_STYLES.map((item) => ({ id: `style:${item.label}`, label: item.label }))];
-const AREAS: HorizontalTab[] = ["現在地周辺", "新宿", "池袋", "渋谷", "中野", "上野", "秋葉原", "吉祥寺", "高田馬場", "東京駅", "銀座", "浅草"].map((area) => ({ id: area, label: area }));
+const AREAS: HorizontalTab[] = ["新宿", "池袋", "渋谷", "中野", "上野", "秋葉原", "吉祥寺", "高田馬場", "東京駅", "銀座", "浅草"].map((area) => ({ id: area, label: area }));
 
 function readState() {
   const params = new URLSearchParams(window.location.search);
