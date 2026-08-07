@@ -178,10 +178,13 @@ export function ResearchAdmin({
   }, []);
   const request = async (url: string, options: RequestInit = {}) => {
     setBusy(true);
-    setMessage("");
+    setMessage(url.includes("/web-ramen") ? "Web調査を開始しています。完了までしばらくお待ちください…" : "");
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), 240_000);
     try {
       const response = await fetch(url, {
         ...options,
+        signal: controller.signal,
         headers: {
           "Content-Type": "application/json",
           ...(options.headers ?? {}),
@@ -206,9 +209,12 @@ export function ResearchAdmin({
       router.refresh();
     } catch (error) {
       setMessage(
-        error instanceof Error ? error.message : "処理に失敗しました。",
+        error instanceof DOMException && error.name === "AbortError"
+          ? "処理が4分を超えたためタイムアウトしました。時間を置いて再実行してください。"
+          : error instanceof Error ? error.message : "処理に失敗しました。",
       );
     } finally {
+      window.clearTimeout(timeout);
       setBusy(false);
     }
   };
@@ -611,9 +617,9 @@ export function ResearchAdmin({
             onClick={() =>
               request("/api/research/admin/web-ramen", { method: "POST" })
             }
-            className="mt-5 rounded-xl bg-gold px-4 py-3 font-bold text-ink"
+            className="mt-5 rounded-xl bg-gold px-4 py-3 font-bold text-ink disabled:cursor-wait disabled:opacity-60"
           >
-            Web調査を実行
+            {busy ? "Web調査を実行中…" : "Web調査を実行"}
           </button>
           {webFetchLog && (
             <p className="mt-4 text-sm text-stone-400">
