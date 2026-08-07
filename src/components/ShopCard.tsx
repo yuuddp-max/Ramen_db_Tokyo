@@ -10,7 +10,7 @@ export function ShopCard({ shop, selected = false }: { shop: RamenShop; distance
   const today = getTodayOpeningHours(shop.opening_hours);
   const ramen = classifyRamen(shop.name);
   const tags = [shop.researched_soup_type ?? ramen.soup, shop.researched_style ?? ramen.style].filter(Boolean).slice(0, 2);
-  const hours = today?.opensAt && today.closesAt ? `${today.opensAt}〜${today.closesAt}` : "営業時間未確認";
+  const hours = today?.periods?.length ? today.periods.join(" / ") : "営業時間未確認";
   const trust = calculateRamenTrustScore(shop);
 
   return <article id={`shop-card-${shop.id}`} className={`group border-b border-border p-5 transition last:border-b-0 hover:bg-background-subtle ${selected ? "bg-accent-light" : ""}`}>

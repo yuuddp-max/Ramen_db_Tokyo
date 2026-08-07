@@ -37,4 +37,8 @@ select.bg-black option { background: #000; color: #fff; }
 input[placeholder*="店名"]:focus, input[placeholder*="店名"]:focus-visible { outline: none !important; box-shadow: none !important; }
 main > div.mb-4 > span:last-child:not(:empty) { color: var(--color-primary) !important; font-weight: 800 !important; }
 main .flex.rounded-lg.border.border-border.bg-white.p-1 { display: none; }
+article[id^="shop-card-"] .grid > div:last-child { display: none; }
+div[class*="border-gold/30"][class*="bg-gold/5"] { display: none; }
+/* Keep the news/shop mode switch in the page header area. */
+main > div.rounded-2xl.border.border-border.bg-white.p-2.shadow-warm { position: sticky; top: 76px; z-index: 30; margin: -1rem auto 1rem; max-width: 1200px; }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; } }

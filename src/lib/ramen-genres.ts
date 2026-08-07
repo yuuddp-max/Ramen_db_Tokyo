@@ -32,6 +32,7 @@ export const RAMEN_STYLES: RamenGenreOption[] = [
   { label: "背脂系", keywords: ["背脂"] },
   { label: "昆布水つけ麺", keywords: ["昆布水"] },
   { label: "冷やしラーメン", keywords: ["冷やし"] },
+  { label: "ちゃんぽん", keywords: ["ちゃんぽん", "チャンポン"] },
 ];
 
 function findGenre(name: string, options: RamenGenreOption[]) {
