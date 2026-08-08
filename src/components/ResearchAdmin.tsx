@@ -129,7 +129,7 @@ const menus: { key: Menu; label: string; description: string }[] = [
   {
     key: "summary",
     label: "登録データ集計",
-    description: "登録済みデータの状態を集計します。",
+    description: "店舗データの登録状況・充足率を確認できます。",
   },
 ];
 
@@ -155,6 +155,29 @@ function Card({
       </p>
     </div>
   );
+}
+
+function DashboardCard({ label, value, suffix = "店", accent = false }: { label: string; value: number; suffix?: string; accent?: boolean }) {
+  return <div className="rounded-2xl border border-[#E7E3DD] bg-white p-5 shadow-[0_2px_8px_rgba(0,0,0,0.04)]"><p className="text-sm font-medium text-[#77736D]">{label}</p><p className={`mt-2 text-3xl font-black ${accent ? "text-[#D28A11]" : "text-[#222]"}`}>{value.toLocaleString()}<span className="ml-1 text-sm font-normal text-[#77736D]">{suffix}</span></p></div>;
+}
+
+function rateStatus(rate: number) {
+  if (rate >= 90) return "充実";
+  if (rate >= 70) return "良好";
+  if (rate >= 30) return "整備中";
+  return "要整備";
+}
+
+function ProgressBar({ rate }: { rate: number }) {
+  return <div className="h-2 overflow-hidden rounded-full bg-[#EEEAE4]"><div className="h-full rounded-full bg-[#D28A11]" style={{ width: `${Math.min(100, Math.max(0, rate))}%` }} /></div>;
+}
+
+function DashboardRateCard({ label, rate, count, total }: { label: string; rate: number; count: number; total: number }) {
+  return <div className="rounded-2xl border border-[#E7E3DD] bg-white p-5 shadow-[0_2px_8px_rgba(0,0,0,0.04)]"><div className="flex items-center justify-between gap-2"><p className="text-sm font-medium text-[#77736D]">{label}</p><span className="rounded-full bg-[#F6F0E7] px-2 py-1 text-xs font-bold text-[#8A5A0A]">{rateStatus(rate)}</span></div><p className="mt-2 text-3xl font-black text-[#222]">{rate}%</p><ProgressBar rate={rate} /><p className="mt-2 text-xs text-[#77736D]">{count.toLocaleString()} / {total.toLocaleString()}店</p></div>;
+}
+
+function BreakdownRow({ category, count, rate, total }: { category: string; count: number; rate: number; total: number }) {
+  return <div className={`rounded-xl px-3 py-2 ${count === 0 ? "text-[#AAA59D]" : "text-[#222]"}`}><div className="flex items-center justify-between gap-3 text-sm"><span className="font-semibold">{category}</span><span className="whitespace-nowrap">{count.toLocaleString()}店 <span className="ml-2 text-xs text-[#77736D]">{rate}%</span></span></div><div className="mt-1 h-1.5 overflow-hidden rounded-full bg-[#EEEAE4]"><div className="h-full rounded-full bg-[#D28A11]" style={{ width: `${total ? Math.min(100, (count / total) * 100) : 0}%` }} /></div></div>;
 }
 
 export function ResearchAdmin({
@@ -376,7 +399,7 @@ export function ResearchAdmin({
           </button>
         </div>
       </div>
-      <nav className="mt-8 grid gap-2 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7">
+      <nav className="mt-8 flex flex-wrap gap-x-6 gap-y-2 border-b border-[#E7E3DD]">
         {menus.map((menu) => (
           <button
             key={menu.key}
@@ -384,7 +407,7 @@ export function ResearchAdmin({
               setActive(menu.key);
               setMessage("");
             }}
-            className={`rounded-xl border px-4 py-3 text-left text-sm font-bold ${active === menu.key ? "border-gold bg-gold text-ink" : "border-white/10 bg-white/5 text-stone-300"}`}
+            className={`border-b-[3px] px-1 py-3 text-left text-sm font-bold transition-colors ${active === menu.key ? "border-[#D28A11] text-[#C77B00]" : "border-transparent text-[#77736D] hover:text-[#C77B00]"}`}
           >
             {menu.label}
           </button>
@@ -650,38 +673,11 @@ export function ResearchAdmin({
         </section>
       )}
       {active === "summary" && (
-        <section className="mt-8 space-y-3">
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            <Card label="レコード数" value={metrics.recordCount} />
-            <Card label="削除数" value={metrics.deletedCount} />
-            <Card label="登録店舗" value={metrics.total} tone="text-gold" />
-          </div>
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            <Card label="スープ系統登録数" value={metrics.soupRegistered} />
-            <Card label="スープ系統登録率" value={metrics.soupRegistrationRate} suffix="%" />
-            <Card label="カテゴリ登録数" value={metrics.styleRegistered} />
-            <Card label="カテゴリ登録率" value={metrics.styleRegistrationRate} suffix="%" />
-          </div>
-          <div className="grid gap-3 sm:grid-cols-3">
-            <Card label="公式サイト登録数" value={metrics.websiteRegistered} />
-            <Card label="公式サイト登録率" value={metrics.websiteRegistrationRate} suffix="%" />
-            <Card label="写真登録数" value={metrics.photoRegistered} />
-            <Card label="写真登録率" value={metrics.photoRegistrationRate} suffix="%" />
-          </div>
-          <div className="mt-12 grid gap-6 lg:grid-cols-2">
-            <div>
-              <h2 className="mb-3 text-xl font-black">スープ系統別集計</h2>
-              <div className="grid gap-3 sm:grid-cols-2">
-                {metrics.soupBreakdown.map((item) => <div key={item.category} className="rounded-xl border border-white/10 bg-black/20 p-4"><p className="text-xs text-stone-500">{item.category}</p><p className="mt-1 text-2xl font-black text-white">{item.count.toLocaleString()}<span className="ml-1 text-sm font-normal text-stone-500">店</span><span className="ml-3 text-base font-bold text-gold">{item.rate}%</span></p></div>)}
-              </div>
-            </div>
-            <div>
-              <h2 className="mb-3 text-xl font-black">カテゴリ別集計</h2>
-              <div className="grid gap-3 sm:grid-cols-2">
-                {metrics.styleBreakdown.map((item) => <div key={item.category} className="rounded-xl border border-white/10 bg-black/20 p-4"><p className="text-xs text-stone-500">{item.category}</p><p className="mt-1 text-2xl font-black text-white">{item.count.toLocaleString()}<span className="ml-1 text-sm font-normal text-stone-500">店</span><span className="ml-3 text-base font-bold text-gold">{item.rate}%</span></p></div>)}
-              </div>
-            </div>
-          </div>
+        <section className="mt-8 space-y-10">
+          <div><h2 className="mb-4 text-2xl font-bold text-[#222]">主要KPI</h2><div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3"><DashboardCard label="総レコード数" value={metrics.recordCount} /><DashboardCard label="登録店舗数" value={metrics.total} accent /><DashboardRateCard label="スープ系統登録率" rate={metrics.soupRegistrationRate} count={metrics.soupRegistered} total={metrics.total} /><DashboardRateCard label="カテゴリ登録率" rate={metrics.styleRegistrationRate} count={metrics.styleRegistered} total={metrics.total} /><DashboardRateCard label="公式サイト登録率" rate={metrics.websiteRegistrationRate} count={metrics.websiteRegistered} total={metrics.total} /><DashboardRateCard label="写真登録率" rate={metrics.photoRegistrationRate} count={metrics.photoRegistered} total={metrics.total} /></div></div>
+          <div className="rounded-2xl border border-[#E7E3DD] bg-white p-5 shadow-[0_2px_8px_rgba(0,0,0,0.04)]"><h2 className="mb-4 text-2xl font-bold text-[#222]">データ登録状況</h2><div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">{[["公式サイト", metrics.websiteRegistrationRate], ["写真", metrics.photoRegistrationRate], ["スープ系統", metrics.soupRegistrationRate], ["カテゴリ", metrics.styleRegistrationRate]].map(([label, rate]) => <div key={String(label)}><div className="mb-1 flex justify-between text-sm"><span className="font-semibold text-[#222]">{label}</span><span className="text-[#77736D]">{rate}%</span></div><ProgressBar rate={Number(rate)} /></div>)}</div></div>
+          <div className="grid gap-4 sm:grid-cols-3"><DashboardCard label="総レコード" value={metrics.recordCount} /><DashboardCard label="有効店舗" value={metrics.total} /><DashboardCard label="削除済み" value={metrics.deletedCount} /></div>
+          <div className="grid gap-8 lg:grid-cols-2"><div className="rounded-2xl border border-[#E7E3DD] bg-white p-5 shadow-[0_2px_8px_rgba(0,0,0,0.04)]"><h2 className="mb-4 text-2xl font-bold text-[#222]">スープ系統別集計</h2><div className="space-y-1">{[...metrics.soupBreakdown].sort((a, b) => b.count - a.count).map((item) => <BreakdownRow key={item.category} {...item} total={metrics.total} />)}</div></div><div className="rounded-2xl border border-[#E7E3DD] bg-white p-5 shadow-[0_2px_8px_rgba(0,0,0,0.04)]"><h2 className="mb-4 text-2xl font-bold text-[#222]">カテゴリ別集計</h2><div className="space-y-1">{[...metrics.styleBreakdown].sort((a, b) => b.count - a.count).map((item) => <BreakdownRow key={item.category} {...item} total={metrics.total} />)}</div></div></div>
         </section>
       )}
       {active === "classification-import" && (
