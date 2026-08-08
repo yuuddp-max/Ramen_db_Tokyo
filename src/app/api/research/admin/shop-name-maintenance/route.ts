@@ -14,11 +14,13 @@ export async function GET(request: NextRequest) {
   const limit = Math.min(Math.max(Number(params.get("limit")) || 100, 1), 200);
   const offset = Math.max(Number(params.get("offset")) || 0, 0);
   const nonRamenOnly = params.get("nonRamen") === "1";
+  const soupUnregistered = params.get("soupUnregistered") === "1";
   const includeExcluded = params.get("includeExcluded") === "1";
   let builder = supabaseAdmin.from("ramen_shops")
     .select("id,place_id,name,address,genres,rating,user_ratings_total,soupCategory,styleCategory,is_excluded,updated_at", { count: "exact" })
     .order("name", { ascending: true });
   if (!includeExcluded) builder = builder.eq("is_excluded", false);
+  if (soupUnregistered) builder = builder.is("soupCategory", null);
   if (nonRamenOnly) builder = builder.limit(20_000);
   else builder = builder.range(offset, offset + limit - 1);
   if (query) builder = builder.ilike("name", `%${query.replace(/[%_]/g, "")}%`);
@@ -31,7 +33,7 @@ export async function GET(request: NextRequest) {
     return nonRamenTerms.some((term) => text.includes(term)) && !ramenTerms.some((term) => text.includes(term));
   }) : (data ?? []);
   const shops = nonRamenOnly ? filteredShops.slice(offset, offset + limit) : filteredShops;
-  return NextResponse.json({ shops, total: nonRamenOnly ? filteredShops.length : count ?? 0, offset, limit, nonRamenOnly, includeExcluded });
+  return NextResponse.json({ shops, total: nonRamenOnly ? filteredShops.length : count ?? 0, offset, limit, nonRamenOnly, soupUnregistered, includeExcluded });
 }
 
 export async function PATCH(request: NextRequest) {
