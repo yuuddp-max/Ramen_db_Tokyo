@@ -51,7 +51,9 @@ export default async function ResearchAdminPage() {
         const training = latestTrainingByShop.get(row.id) ?? latestTrainingByShop.get(row.place_id);
         const nameTraining = latestTrainingByName.get(normalizeName(row.name));
         const fallback = training ?? nameTraining;
-        const category = (row[key] ?? (key === "soupCategory" ? fallback?.soup_category : fallback?.style_category))?.trim();
+        const current = row[key]?.trim();
+        const trained = (key === "soupCategory" ? fallback?.soup_category : fallback?.style_category)?.trim();
+        const category = current && current !== "不明" ? current : trained || current;
         if (category && counts.has(category)) counts.set(category, (counts.get(category) ?? 0) + 1);
       }
       return categories.map((category) => {
