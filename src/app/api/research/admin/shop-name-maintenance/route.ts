@@ -69,11 +69,6 @@ export async function PATCH(request: NextRequest) {
       classificationVersion: "maintenance-v1",
       classificationSourceHash: sourceHash,
       classifiedAt: hasClassification ? now : null,
-      researched_soup_type: soupCategory || null,
-      researched_style: styleCategory || null,
-      research_confidence: hasClassification ? "high" : null,
-      research_status: hasClassification ? "approved" : "pending",
-      research_updated_at: hasClassification ? now : null,
     })
     .eq("place_id", placeId)
     .eq("is_excluded", false)
