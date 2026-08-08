@@ -653,7 +653,6 @@ export function ResearchAdmin({
               出力対象
               <select value={predictionScope} onChange={(event) => { const next = event.target.value as PredictionScope; if (next === "all" && !window.confirm("全店舗を出力対象にします。大量のデータが出力される可能性があります。続行しますか？")) return; setPredictionScope(next); setPredictionStats(null); setPredictionMessage(""); }} className="mt-1 block min-w-64 rounded-lg border border-white/15 bg-black px-3 py-2 text-white">
                 <option value="unclassified">未分類のみ</option>
-                <option value="include-review">確認待ちを含む</option>
                 <option value="all">全店舗</option>
                 <option value="updated">更新された店舗のみ</option>
               </select>
