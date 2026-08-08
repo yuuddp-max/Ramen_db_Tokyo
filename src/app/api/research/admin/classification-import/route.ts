@@ -7,7 +7,10 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const MAX_BYTES = 5 * 1024 * 1024;
-const MAX_ROWS = 1_000;
+// Keep this above the current Tokyo shop CSV size so a valid export is not
+// silently truncated before later rows (such as the niboshi classifications)
+// are imported.
+const MAX_ROWS = 10_000;
 
 type ShopRow = {
   id: string;
