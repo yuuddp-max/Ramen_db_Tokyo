@@ -28,6 +28,7 @@ export type LocalModelResult = { soup: CategoryResult<SoupCategory>; style: Cate
 const soupRules: KeywordRule<SoupCategory>[] = [
   { category: "貝出汁", keywords: ["貝出汁", "貝だし", "貝ダシ", "しじみ", "あさり", "蛤", "はまぐり"], excludeKeywords: [], priority: 84, score: 0.94 },
   { category: "担々麺", keywords: ["担々麺", "担担麺", "担々", "担担", "坦々", "坦坦"], excludeKeywords: [], priority: 83, score: 0.94 },
+  { category: "牛骨", keywords: ["牛骨", "牛だし", "牛ダシ"], excludeKeywords: [], priority: 82, score: 0.94 },
   { category: "豚骨醤油", keywords: ["豚骨醤油", "豚骨しょうゆ", "横浜家系", "家系ラーメン"], excludeKeywords: [], priority: 100, score: 0.98 },
   { category: "豚骨魚介", keywords: ["豚骨魚介", "魚介豚骨", "とんこつ魚介", "豚骨つけ麺"], excludeKeywords: [], priority: 98, score: 0.96 },
   { category: "鶏白湯", keywords: ["鶏白湯", "鳥白湯", "鶏ぱいたん"], excludeKeywords: [], priority: 95, score: 0.97 },
