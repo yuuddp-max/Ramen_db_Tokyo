@@ -354,15 +354,24 @@ export function ResearchAdmin({
             {activeMenu.description}
           </p>
         </div>
-        <button
-          disabled={busy}
-          onClick={() =>
-            request("/api/research/admin/session", { method: "DELETE" })
-          }
-          className="rounded-xl border border-white/15 px-4 py-2 text-sm text-stone-400"
-        >
-          ログアウト
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            disabled={busy}
+            onClick={() => window.location.reload()}
+            className="rounded-xl border border-gold/50 px-4 py-2 text-sm font-bold text-gold hover:bg-gold/10 disabled:cursor-wait disabled:opacity-50"
+          >
+            リロード
+          </button>
+          <button
+            disabled={busy}
+            onClick={() =>
+              request("/api/research/admin/session", { method: "DELETE" })
+            }
+            className="rounded-xl border border-white/15 px-4 py-2 text-sm text-stone-400"
+          >
+            ログアウト
+          </button>
+        </div>
       </div>
       <nav className="mt-8 grid gap-2 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7">
         {menus.map((menu) => (
