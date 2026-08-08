@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { SOUP_CATEGORIES, STYLE_CATEGORIES } from "@/lib/shop-classification";
+import { SOUP_CATEGORIES, STYLE_CATEGORIES } from "@/lib/shop-classification-categories";
 
 const PAGE_SIZE = 10;
 type Shop = { place_id: string; name: string; address: string | null; genres?: string[] | null; rating: number | null; user_ratings_total: number | null; soupCategory: string | null; styleCategory: string | null };
