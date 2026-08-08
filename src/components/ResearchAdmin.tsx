@@ -74,7 +74,10 @@ type Metrics = {
   websiteRegistrationRate: number;
   photoRegistered: number;
   photoRegistrationRate: number;
+  soupBreakdown: CategoryMetric[];
+  styleBreakdown: CategoryMetric[];
 };
+type CategoryMetric = { category: string; count: number; rate: number };
 type ClassificationMetrics = {
   total: number;
   processed: number;
@@ -664,6 +667,20 @@ export function ResearchAdmin({
             <Card label="公式サイト登録率" value={metrics.websiteRegistrationRate} suffix="%" />
             <Card label="写真登録数" value={metrics.photoRegistered} />
             <Card label="写真登録率" value={metrics.photoRegistrationRate} suffix="%" />
+          </div>
+          <div className="mt-12 grid gap-6 lg:grid-cols-2">
+            <div>
+              <h2 className="mb-3 text-xl font-black">スープ系統別集計</h2>
+              <div className="grid gap-3 sm:grid-cols-2">
+                {metrics.soupBreakdown.map((item) => <div key={item.category} className="rounded-xl border border-white/10 bg-black/20 p-4"><p className="text-xs text-stone-500">{item.category}</p><p className="mt-1 text-2xl font-black text-white">{item.count.toLocaleString()}<span className="ml-1 text-sm font-normal text-stone-500">店</span><span className="ml-3 text-base font-bold text-gold">{item.rate}%</span></p></div>)}
+              </div>
+            </div>
+            <div>
+              <h2 className="mb-3 text-xl font-black">カテゴリ別集計</h2>
+              <div className="grid gap-3 sm:grid-cols-2">
+                {metrics.styleBreakdown.map((item) => <div key={item.category} className="rounded-xl border border-white/10 bg-black/20 p-4"><p className="text-xs text-stone-500">{item.category}</p><p className="mt-1 text-2xl font-black text-white">{item.count.toLocaleString()}<span className="ml-1 text-sm font-normal text-stone-500">店</span><span className="ml-3 text-base font-bold text-gold">{item.rate}%</span></p></div>)}
+              </div>
+            </div>
           </div>
         </section>
       )}
