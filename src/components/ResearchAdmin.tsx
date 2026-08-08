@@ -169,6 +169,21 @@ function BreakdownRow({ category, count, rate, total }: { category: string; coun
   return <div className={`rounded-xl px-3 py-2 ${count === 0 ? "text-[#AAA59D]" : "text-[#222]"}`}><div className="flex items-center justify-between gap-3 text-sm"><span className="font-semibold">{category}</span><span className="whitespace-nowrap">{count.toLocaleString()}店 <span className="ml-2 text-xs text-[#77736D]">{rate}%</span></span></div><div className="mt-1 h-1.5 overflow-hidden rounded-full bg-[#EEEAE4]"><div className="h-full rounded-full bg-[#D28A11]" style={{ width: `${total ? Math.min(100, (count / total) * 100) : 0}%` }} /></div></div>;
 }
 
+const SOUP_BAR_COLORS = ["#4F86C6", "#C45151", "#97B956", "#D28A11", "#7B6AA8", "#4C9A9A", "#C17C55", "#8B8F94"];
+
+function SoupBreakdownChart({ items, total }: { items: CategoryMetric[]; total: number }) {
+  const sorted = [...items].filter((item) => item.count > 0).sort((a, b) => b.count - a.count);
+  return <div>
+    <div className="mb-2 flex justify-between text-xs text-[#77736D]"><span>0%</span><span>20%</span><span>40%</span><span>60%</span><span>80%</span><span>100%</span></div>
+    <div className="flex h-12 overflow-hidden rounded-lg bg-[#EEEAE4]" aria-label="スープ系統別の構成比">
+      {sorted.map((item, index) => <div key={item.category} title={item.category + ": " + item.count.toLocaleString() + "店 (" + item.rate + "%)"} className="flex min-w-0 items-center justify-center px-1 text-xs font-bold text-white transition-opacity hover:opacity-80" style={{ width: (total ? (item.count / total) * 100 : 0) + "%", backgroundColor: SOUP_BAR_COLORS[index % SOUP_BAR_COLORS.length] }}>{item.rate >= 4 ? item.rate + "%" : ""}</div>)}
+    </div>
+    <div className="mt-4 grid gap-x-4 gap-y-2 sm:grid-cols-2">
+      {sorted.map((item, index) => <div key={item.category} className="flex items-center justify-between gap-2 text-sm"><span className="flex min-w-0 items-center gap-2 text-[#222]"><span className="h-3 w-3 shrink-0 rounded-sm" style={{ backgroundColor: SOUP_BAR_COLORS[index % SOUP_BAR_COLORS.length] }} />{item.category}</span><span className="whitespace-nowrap text-[#77736D]">{item.count.toLocaleString()}店 ({item.rate}%)</span></div>)}
+    </div>
+  </div>;
+}
+
 export function ResearchAdmin({
   authenticated,
   drafts,
@@ -665,7 +680,7 @@ export function ResearchAdmin({
         <section className="mt-8 space-y-10">
           <div><h2 className="mb-4 text-2xl font-bold text-[#222]">主要KPI</h2><div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3"><DashboardCard label="総レコード数" value={metrics.recordCount} /><DashboardCard label="削除済み" value={metrics.deletedCount} /><DashboardCard label="登録店舗数" value={metrics.total} accent /></div></div>
           <div className="rounded-2xl border border-[#E7E3DD] bg-white p-5 shadow-[0_2px_8px_rgba(0,0,0,0.04)]"><h2 className="mb-4 text-2xl font-bold text-[#222]">データ登録状況</h2><div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">{[["スープ系統", metrics.soupRegistrationRate], ["カテゴリ", metrics.styleRegistrationRate], ["公式サイト", metrics.websiteRegistrationRate], ["写真", metrics.photoRegistrationRate]].map(([label, rate]) => <div key={String(label)}><div className="mb-1 flex justify-between text-sm"><span className="font-semibold text-[#222]">{label}</span><span className="text-[#77736D]">{rate}%</span></div><ProgressBar rate={Number(rate)} /></div>)}</div></div>
-          <div className="grid gap-8 lg:grid-cols-2"><div className="rounded-2xl border border-[#E7E3DD] bg-white p-5 shadow-[0_2px_8px_rgba(0,0,0,0.04)]"><h2 className="mb-4 text-2xl font-bold text-[#222]">スープ系統別集計</h2><div className="space-y-1">{[...metrics.soupBreakdown].sort((a, b) => b.count - a.count).map((item) => <BreakdownRow key={item.category} {...item} total={metrics.total} />)}</div></div><div className="rounded-2xl border border-[#E7E3DD] bg-white p-5 shadow-[0_2px_8px_rgba(0,0,0,0.04)]"><h2 className="mb-4 text-2xl font-bold text-[#222]">カテゴリ別集計</h2><div className="space-y-1">{[...metrics.styleBreakdown].sort((a, b) => b.count - a.count).map((item) => <BreakdownRow key={item.category} {...item} total={metrics.total} />)}</div></div></div>
+          <div className="grid gap-8 lg:grid-cols-2"><div className="rounded-2xl border border-[#E7E3DD] bg-white p-5 shadow-[0_2px_8px_rgba(0,0,0,0.04)]"><h2 className="mb-4 text-2xl font-bold text-[#222]">スープ系統別集計</h2><SoupBreakdownChart items={metrics.soupBreakdown} total={metrics.total} /></div><div className="rounded-2xl border border-[#E7E3DD] bg-white p-5 shadow-[0_2px_8px_rgba(0,0,0,0.04)]"><h2 className="mb-4 text-2xl font-bold text-[#222]">カテゴリ別集計</h2><div className="space-y-1">{[...metrics.styleBreakdown].sort((a, b) => b.count - a.count).map((item) => <BreakdownRow key={item.category} {...item} total={metrics.total} />)}</div></div></div>
         </section>
       )}
       {active === "classification-import" && (
