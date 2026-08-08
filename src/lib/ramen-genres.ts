@@ -31,7 +31,6 @@ export const RAMEN_STYLES: RamenGenreOption[] = [
   { label: "濃厚系", keywords: ["濃厚"] },
   { label: "背脂系", keywords: ["背脂"] },
   { label: "昆布水つけ麺", keywords: ["昆布水"] },
-  { label: "冷やしラーメン", keywords: ["冷やし"] },
   { label: "ちゃんぽん", keywords: ["ちゃんぽん", "チャンポン"] },
 ];
 
