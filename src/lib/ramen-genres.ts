@@ -19,7 +19,7 @@ export const RAMEN_SOUPS: RamenGenreOption[] = [
 ];
 
 export const RAMEN_STYLES: RamenGenreOption[] = [
-  { label: "東京中華そば", keywords: ["東京中華そば", "東京ラーメン", "中華そば"] },
+  { label: "中華そば", keywords: ["東京中華そば", "東京ラーメン", "中華そば"] },
   { label: "家系", keywords: ["家系"] },
   { label: "二郎系", keywords: ["二郎系", "二郎"] },
   { label: "二郎インスパイア", keywords: ["二郎インスパイア", "二郎インスパ", "インスパイア"] },
