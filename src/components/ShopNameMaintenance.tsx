@@ -1,14 +1,12 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import { SOUP_CATEGORIES, STYLE_CATEGORIES } from "@/lib/shop-classification-categories";
 
 const PAGE_SIZE = 10;
 type Shop = { place_id: string; name: string; address: string | null; genres?: string[] | null; rating: number | null; user_ratings_total: number | null; soupCategory: string | null; styleCategory: string | null };
 
 export function ShopNameMaintenance() {
-  const router = useRouter();
   const [shops, setShops] = useState<Shop[]>([]);
   const [total, setTotal] = useState(0);
   const [query, setQuery] = useState("");
@@ -46,7 +44,7 @@ export function ShopNameMaintenance() {
       const response = await fetch("/api/research/admin/shop-name-maintenance", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ placeId: shop.place_id, name, soupCategory, styleCategory }) });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error ?? "店名の保存に失敗しました。");
-      await load(); router.refresh(); setMessage(`${data.shop?.name ?? name} の店名・分類を保存しました。`);
+      await load(); setMessage(`${data.shop?.name ?? name} の店名・分類を保存しました。`);
     } catch (error) { setMessage(error instanceof Error ? error.message : "店名の保存に失敗しました。"); }
     finally { setSaving(null); }
   };
@@ -57,7 +55,7 @@ export function ShopNameMaintenance() {
       const response = await fetch("/api/research/admin/exclude-shop", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ placeId: shop.place_id }) });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error ?? "店舗の削除に失敗しました。");
-      await load(); router.refresh(); setMessage(`${shop.name} を店舗一覧から削除しました。`);
+      await load(); setMessage(`${shop.name} を店舗一覧から削除しました。`);
     } catch (error) { setMessage(error instanceof Error ? error.message : "店舗の削除に失敗しました。"); }
     finally { setSaving(null); }
   };
@@ -70,7 +68,7 @@ export function ShopNameMaintenance() {
       const response = await fetch("/api/research/admin/exclude-shops", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ placeIds }) });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error ?? "店舗の一括削除に失敗しました。");
-      await load(); router.refresh(); setMessage(data.message ?? `${data.excluded ?? 0}店舗を削除しました。`);
+      await load(); setMessage(data.message ?? `${data.excluded ?? 0}店舗を削除しました。`);
     } catch (error) { setMessage(error instanceof Error ? error.message : "店舗の一括削除に失敗しました。"); }
     finally { setSaving(null); }
   };
