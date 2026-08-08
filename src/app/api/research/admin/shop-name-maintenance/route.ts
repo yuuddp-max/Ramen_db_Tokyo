@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
   const nonRamenOnly = params.get("nonRamen") === "1";
   const includeExcluded = params.get("includeExcluded") === "1";
   let builder = supabaseAdmin.from("ramen_shops")
-    .select("id,place_id,name,address,genres,rating,user_ratings_total,soupCategory,styleCategory,updated_at", { count: "exact" })
+    .select("id,place_id,name,address,genres,rating,user_ratings_total,soupCategory,styleCategory,is_excluded,updated_at", { count: "exact" })
     .order("name", { ascending: true });
   if (!includeExcluded) builder = builder.eq("is_excluded", false);
   if (nonRamenOnly) builder = builder.limit(20_000);
