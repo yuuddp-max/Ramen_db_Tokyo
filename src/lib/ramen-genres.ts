@@ -10,6 +10,7 @@ export const RAMEN_SOUPS: RamenGenreOption[] = [
   { label: "鶏白湯", keywords: ["鶏白湯", "鳥白湯", "鶏ぱいたん"] },
   { label: "魚介", keywords: ["魚介", "節系", "魚粉"] },
   { label: "煮干し", keywords: ["煮干", "にぼし"] },
+  { label: "ちゃんぽん", keywords: ["ちゃんぽん", "チャンポン"] },
   { label: "貝出汁", keywords: ["貝出汁", "貝だし", "しじみ", "あさり", "蛤"] },
   { label: "海老", keywords: ["海老", "えび", "エビ"] },
   { label: "牛骨", keywords: ["牛骨"] },
