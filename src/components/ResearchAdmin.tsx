@@ -186,7 +186,7 @@ export function ResearchAdmin({
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
-  const [active, setActive] = useState<Menu>("google");
+  const [active, setActive] = useState<Menu>("summary");
   const [query, setQuery] = useState("ラーメン");
   const [excludeKeywords, setExcludeKeywords] = useState("");
   const [manual, setManual] = useState<
