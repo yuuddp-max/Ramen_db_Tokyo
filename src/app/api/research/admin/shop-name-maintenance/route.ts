@@ -75,13 +75,15 @@ export async function PATCH(request: NextRequest) {
     .select("id,place_id,name")
     .single();
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  const { error: trainingError } = await supabaseAdmin.from("classification_training_examples").upsert({
-    shop_id: data.id,
-    classification_text: classificationText,
-    source_hash: sourceHash,
-    soup_category: soupCategory || null,
-    style_category: styleCategory || null,
-  }, { onConflict: "shop_id,source_hash,soup_category,style_category" });
-  if (trainingError) return NextResponse.json({ error: `分類データの保存に失敗しました: ${trainingError.message}` }, { status: 500 });
+  if (soupCategory && styleCategory) {
+    const { error: trainingError } = await supabaseAdmin.from("classification_training_examples").upsert({
+      shop_id: data.id,
+      classification_text: classificationText,
+      source_hash: sourceHash,
+      soup_category: soupCategory,
+      style_category: styleCategory,
+    }, { onConflict: "shop_id,source_hash,soup_category,style_category" });
+    if (trainingError) return NextResponse.json({ error: `分類データの保存に失敗しました: ${trainingError.message}` }, { status: 500 });
+  }
   return NextResponse.json({ ok: true, shop: data });
 }

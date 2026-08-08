@@ -180,8 +180,10 @@ export async function POST(request: NextRequest) {
       classificationSourceHash: sourceHash, classifiedAt: now,
     }).eq("id", shop.id);
     if (error) { errors.push(`行${index + 2}: ${error.message}`); continue; }
-    const { error: trainingError } = await supabaseAdmin.from("classification_training_examples").upsert({ shop_id: shop.id, classification_text: canonicalText, source_hash: sourceHash, soup_category: soup, style_category: style }, { onConflict: "shop_id,source_hash,soup_category,style_category" });
-    if (trainingError) { errors.push(`行${index + 2}: 教師データ保存失敗`); continue; }
+    if (soup && style) {
+      const { error: trainingError } = await supabaseAdmin.from("classification_training_examples").upsert({ shop_id: shop.id, classification_text: canonicalText, source_hash: sourceHash, soup_category: soup, style_category: style }, { onConflict: "shop_id,source_hash,soup_category,style_category" });
+      if (trainingError) { errors.push(`行${index + 2}: 教師データ保存失敗`); continue; }
+    }
     updated += 1;
   }
   return NextResponse.json({ ok: true, updated, skipped: skipped.length, errors: errors.length, details: [...skipped, ...errors].slice(0, 20), truncated: parsed.length - 1 > MAX_ROWS });
