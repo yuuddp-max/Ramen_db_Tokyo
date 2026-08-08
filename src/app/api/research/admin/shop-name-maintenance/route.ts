@@ -12,15 +12,24 @@ export async function GET(request: NextRequest) {
   const query = params.get("q")?.trim() ?? "";
   const limit = Math.min(Math.max(Number(params.get("limit")) || 100, 1), 200);
   const offset = Math.max(Number(params.get("offset")) || 0, 0);
+  const nonRamenOnly = params.get("nonRamen") === "1";
   let builder = supabaseAdmin.from("ramen_shops")
-    .select("id,place_id,name,address,rating,user_ratings_total,updated_at", { count: "exact" })
+    .select("id,place_id,name,address,genres,rating,user_ratings_total,updated_at", { count: "exact" })
     .eq("is_excluded", false)
-    .order("name", { ascending: true })
-    .range(offset, offset + limit - 1);
+    .order("name", { ascending: true });
+  if (nonRamenOnly) builder = builder.limit(20_000);
+  else builder = builder.range(offset, offset + limit - 1);
   if (query) builder = builder.ilike("name", `%${query.replace(/[%_]/g, "")}%`);
   const { data, count, error } = await builder;
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  return NextResponse.json({ shops: data ?? [], total: count ?? 0, offset, limit });
+  const ramenTerms = ["ラーメン", "らーめん", "つけ麺", "中華そば", "油そば", "まぜそば", "担々麺", "家系", "二郎"];
+  const nonRamenTerms = ["美容", "サロン", "マッサージ", "焼肉", "居酒屋", "寿司", "鮨", "カフェ", "パン", "ケーキ", "餃子", "うどん", "そば", "自販機", "駐車場", "ホテル", "バー", "スナック", "コンビニ", "薬局", "病院", "ステーキ"];
+  const filteredShops = nonRamenOnly ? (data ?? []).filter((shop) => {
+    const text = [shop.name, shop.address, ...((shop.genres ?? []) as string[])].filter(Boolean).join(" ");
+    return nonRamenTerms.some((term) => text.includes(term)) && !ramenTerms.some((term) => text.includes(term));
+  }) : (data ?? []);
+  const shops = nonRamenOnly ? filteredShops.slice(offset, offset + limit) : filteredShops;
+  return NextResponse.json({ shops, total: nonRamenOnly ? filteredShops.length : count ?? 0, offset, limit, nonRamenOnly });
 }
 
 export async function PATCH(request: NextRequest) {
