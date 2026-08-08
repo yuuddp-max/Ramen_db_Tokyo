@@ -23,7 +23,7 @@ export default async function ResearchAdminPage() {
       supabaseAdmin.from("ramen_shops").select("id", { count: "exact", head: true }).eq("is_excluded", false).not("styleCategory", "is", null),
       supabaseAdmin.from("ramen_shops").select("id", { count: "exact", head: true }).eq("is_excluded", false).not("website", "is", null),
       supabaseAdmin.from("ramen_shops").select("id", { count: "exact", head: true }).eq("is_excluded", false).not("photo_name", "is", null),
-      supabaseAdmin.from("ramen_shops").select('"soupCategory","styleCategory"').eq("is_excluded", false).range(0, 9_999),
+      supabaseAdmin.from("ramen_shops").select('"soupCategory","styleCategory",researched_soup_type,researched_style').eq("is_excluded", false).range(0, 9_999),
       supabaseAdmin.from("ramen_shops").select("id", { count: "exact", head: true }).eq("is_excluded", false).not("classificationStatus", "is", null),
       supabaseAdmin.from("ramen_shops").select("id", { count: "exact", head: true }).eq("is_excluded", false).eq("classificationStatus", "auto-approved"),
       supabaseAdmin.from("ramen_shops").select("id", { count: "exact", head: true }).eq("is_excluded", false).eq("classificationStatus", "needs-review"),
@@ -34,11 +34,11 @@ export default async function ResearchAdminPage() {
     const { data } = classificationReviewResult;
     drafts = data ?? [];
     webFetchLog = xFetchLogResult.data ?? null;
-    const categoryRows = (categoryRowsResult.data ?? []) as Array<{ soupCategory: string | null; styleCategory: string | null }>;
+    const categoryRows = (categoryRowsResult.data ?? []) as Array<{ soupCategory: string | null; styleCategory: string | null; researched_soup_type: string | null; researched_style: string | null }>;
     const countBy = (key: "soupCategory" | "styleCategory", categories: readonly string[]) => {
       const counts = new Map(categories.map((category) => [category, 0]));
       for (const row of categoryRows) {
-        const category = row[key]?.trim();
+        const category = (key === "soupCategory" ? row.soupCategory ?? row.researched_soup_type : row.styleCategory ?? row.researched_style)?.trim();
         if (category && counts.has(category)) counts.set(category, (counts.get(category) ?? 0) + 1);
       }
       return categories.map((category) => {
@@ -46,20 +46,24 @@ export default async function ResearchAdminPage() {
         return { category, count, rate: totalResult.count ? Math.round((count / totalResult.count) * 1000) / 10 : 0 };
       });
     };
+    const soupBreakdown = countBy("soupCategory", SOUP_CATEGORIES);
+    const styleBreakdown = countBy("styleCategory", STYLE_CATEGORIES);
+    const soupRegistered = soupBreakdown.reduce((sum, item) => sum + item.count, 0);
+    const styleRegistered = styleBreakdown.reduce((sum, item) => sum + item.count, 0);
     metrics = {
       recordCount: recordCountResult.count ?? 0,
       deletedCount: deletedCountResult.count ?? 0,
       total: totalResult.count ?? 0,
-      soupRegistered: soupRegisteredResult.count ?? 0,
-      soupRegistrationRate: totalResult.count ? Math.round(((soupRegisteredResult.count ?? 0) / totalResult.count) * 1000) / 10 : 0,
-      styleRegistered: styleRegisteredResult.count ?? 0,
-      styleRegistrationRate: totalResult.count ? Math.round(((styleRegisteredResult.count ?? 0) / totalResult.count) * 1000) / 10 : 0,
+      soupRegistered,
+      soupRegistrationRate: totalResult.count ? Math.round((soupRegistered / totalResult.count) * 1000) / 10 : 0,
+      styleRegistered,
+      styleRegistrationRate: totalResult.count ? Math.round((styleRegistered / totalResult.count) * 1000) / 10 : 0,
       websiteRegistered: websiteRegisteredResult.count ?? 0,
       websiteRegistrationRate: totalResult.count ? Math.round(((websiteRegisteredResult.count ?? 0) / totalResult.count) * 1000) / 10 : 0,
       photoRegistered: photoRegisteredResult.count ?? 0,
       photoRegistrationRate: totalResult.count ? Math.round(((photoRegisteredResult.count ?? 0) / totalResult.count) * 1000) / 10 : 0,
-      soupBreakdown: countBy("soupCategory", SOUP_CATEGORIES),
-      styleBreakdown: countBy("styleCategory", STYLE_CATEGORIES),
+      soupBreakdown,
+      styleBreakdown,
     };
     const total = totalResult.count ?? 0;
     const processed = classificationProcessed.count ?? 0;
