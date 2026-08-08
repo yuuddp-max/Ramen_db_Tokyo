@@ -23,8 +23,8 @@ export default async function ResearchAdminPage() {
       supabaseAdmin.from("ramen_shops").select("id", { count: "exact", head: true }).eq("is_excluded", false).not("styleCategory", "is", null),
       supabaseAdmin.from("ramen_shops").select("id", { count: "exact", head: true }).eq("is_excluded", false).not("website", "is", null),
       supabaseAdmin.from("ramen_shops").select("id", { count: "exact", head: true }).eq("is_excluded", false).not("photo_name", "is", null),
-      supabaseAdmin.from("ramen_shops").select('id,"soupCategory","styleCategory"').eq("is_excluded", false).range(0, 9_999),
-      supabaseAdmin.from("classification_training_examples").select("shop_id,soup_category,style_category,created_at").order("created_at", { ascending: false }).range(0, 19_999),
+      supabaseAdmin.from("ramen_shops").select('id,place_id,name,"soupCategory","styleCategory"').eq("is_excluded", false).range(0, 9_999),
+      supabaseAdmin.from("classification_training_examples").select("shop_id,classification_text,soup_category,style_category,created_at").order("created_at", { ascending: false }).range(0, 19_999),
       supabaseAdmin.from("ramen_shops").select("id", { count: "exact", head: true }).eq("is_excluded", false).not("classificationStatus", "is", null),
       supabaseAdmin.from("ramen_shops").select("id", { count: "exact", head: true }).eq("is_excluded", false).eq("classificationStatus", "auto-approved"),
       supabaseAdmin.from("ramen_shops").select("id", { count: "exact", head: true }).eq("is_excluded", false).eq("classificationStatus", "needs-review"),
@@ -35,17 +35,23 @@ export default async function ResearchAdminPage() {
     const { data } = classificationReviewResult;
     drafts = data ?? [];
     webFetchLog = xFetchLogResult.data ?? null;
-    const categoryRows = (categoryRowsResult.data ?? []) as Array<{ id: string; soupCategory: string | null; styleCategory: string | null }>;
-    const trainingRows = (trainingRowsResult.data ?? []) as Array<{ shop_id: string | null; soup_category: string | null; style_category: string | null }>;
+    const categoryRows = (categoryRowsResult.data ?? []) as Array<{ id: string; place_id: string; name: string | null; soupCategory: string | null; styleCategory: string | null }>;
+    const trainingRows = (trainingRowsResult.data ?? []) as Array<{ shop_id: string | null; classification_text: string | null; soup_category: string | null; style_category: string | null }>;
     const latestTrainingByShop = new Map<string, { soup_category: string | null; style_category: string | null }>();
+    const latestTrainingByName = new Map<string, { soup_category: string | null; style_category: string | null }>();
+    const normalizeName = (value: string | null) => value?.normalize("NFKC").replace(/\s+/g, "").trim().toLocaleLowerCase("ja-JP") ?? "";
     for (const row of trainingRows) {
       if (row.shop_id && !latestTrainingByShop.has(row.shop_id)) latestTrainingByShop.set(row.shop_id, row);
+      const name = normalizeName(row.classification_text);
+      if (name && !latestTrainingByName.has(name)) latestTrainingByName.set(name, row);
     }
     const countBy = (key: "soupCategory" | "styleCategory", categories: readonly string[]) => {
       const counts = new Map(categories.map((category) => [category, 0]));
       for (const row of categoryRows) {
-        const training = latestTrainingByShop.get(row.id);
-        const category = (row[key] ?? (key === "soupCategory" ? training?.soup_category : training?.style_category))?.trim();
+        const training = latestTrainingByShop.get(row.id) ?? latestTrainingByShop.get(row.place_id);
+        const nameTraining = latestTrainingByName.get(normalizeName(row.name));
+        const fallback = training ?? nameTraining;
+        const category = (row[key] ?? (key === "soupCategory" ? fallback?.soup_category : fallback?.style_category))?.trim();
         if (category && counts.has(category)) counts.set(category, (counts.get(category) ?? 0) + 1);
       }
       return categories.map((category) => {
