@@ -157,14 +157,13 @@ export async function POST(request: NextRequest) {
     const missing: string[] = [];
     if (!id) missing.push("id");
     if (!text) missing.push("name");
-    if (!soup) missing.push("soup_category");
-    if (!style) missing.push("style_category");
     if (missing.length) { skipped.push(`行${index + 2}: ${missing.join(", ")} が未入力です`); continue; }
     if (!shop) { skipped.push(`行${index + 2}: idまたは店舗名に一致する店舗がありません`); continue; }
     const canonicalText = normalize(shop.name);
     const sourceHash = classificationSourceHash(canonicalText);
     if (suppliedSourceHash && suppliedSourceHash !== sourceHash) { skipped.push(`行${index + 2}: source_hashがclassification_textと一致しません`); continue; }
-    if (!SOUP_CATEGORIES.includes(soup as (typeof SOUP_CATEGORIES)[number]) || !STYLE_CATEGORIES.includes(style as (typeof STYLE_CATEGORIES)[number])) { skipped.push(`行${index + 2}: 分類値が不正`); continue; }
+    // 分類欄は空白を許可する。値が入力されている場合だけ選択肢を検証する。
+    if ((soup && !SOUP_CATEGORIES.includes(soup as (typeof SOUP_CATEGORIES)[number])) || (style && !STYLE_CATEGORIES.includes(style as (typeof STYLE_CATEGORIES)[number]))) { skipped.push(`行${index + 2}: 分類値が不正`); continue; }
     const now = new Date().toISOString();
     const { error } = await supabaseAdmin.from("ramen_shops").update({
       soupCategory: soup, styleCategory: style, soupConfidence: 1, styleConfidence: 1,
