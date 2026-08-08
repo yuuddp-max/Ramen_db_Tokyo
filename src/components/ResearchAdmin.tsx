@@ -120,7 +120,7 @@ const menus: { key: Menu; label: string; description: string }[] = [
   },
   {
     key: "name-maintenance",
-    label: "データメンテナンス",
+    label: "データメンテ",
     description: "登録済み店舗の店名を修正します。",
   },
 ];
