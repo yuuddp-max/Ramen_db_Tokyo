@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 
 export const SOUP_CATEGORIES = ["醤油", "塩", "味噌", "豚骨", "豚骨醤油", "豚骨魚介", "鶏白湯", "煮干し", "魚介", "貝出汁", "ちゃんぽん", "その他", "不明"] as const;
-export const STYLE_CATEGORIES = ["中華そば", "家系", "二郎系", "つけ麺", "油そば・まぜそば", "担々麺", "博多系", "札幌系", "淡麗系", "濃厚系", "その他", "不明"] as const;
+export const STYLE_CATEGORIES = ["中華そば", "家系", "二郎系", "二郎インスパイア", "つけ麺", "油そば・まぜそば", "担々麺", "博多系", "札幌系", "淡麗系", "濃厚系", "その他", "不明"] as const;
 export type SoupCategory = (typeof SOUP_CATEGORIES)[number];
 export type StyleCategory = (typeof STYLE_CATEGORIES)[number];
 export type ClassificationMethod = "rule" | "local-model" | "generative-ai" | "manual";
@@ -42,6 +42,7 @@ const soupRules: KeywordRule<SoupCategory>[] = [
 
 const styleRules: KeywordRule<StyleCategory>[] = [
   { category: "家系", keywords: ["家系", "横浜家系"], excludeKeywords: [], priority: 100, score: 0.99 },
+  { category: "二郎インスパイア", keywords: ["二郎インスパイア", "二郎インスパ", "インスパイア系"], excludeKeywords: [], priority: 97, score: 0.98 },
   { category: "二郎系", keywords: ["二郎系", "二郎インスパイア", "二郎系インスパイア"], excludeKeywords: [], priority: 95, score: 0.98 },
   { category: "油そば・まぜそば", keywords: ["油そば", "まぜそば", "混ぜそば", "汁なし"], excludeKeywords: ["つけそば"], priority: 90, score: 0.97 },
   { category: "つけ麺", keywords: ["つけ麺", "つけめん", "つけそば"], excludeKeywords: [], priority: 85, score: 0.96 },
