@@ -169,7 +169,6 @@ export async function POST(request: NextRequest) {
       soupCategory: soup, styleCategory: style, soupConfidence: 1, styleConfidence: 1,
       classificationMethod: "manual", classificationStatus: "manually-approved", classificationVersion: "csv-import-v1",
       classificationSourceHash: sourceHash, classifiedAt: now,
-      researched_soup_type: soup, researched_style: style, research_confidence: "high", research_status: "approved", research_updated_at: now,
     }).eq("id", shop.id);
     if (error) { errors.push(`行${index + 2}: ${error.message}`); continue; }
     const { error: trainingError } = await supabaseAdmin.from("classification_training_examples").upsert({ shop_id: shop.id, classification_text: canonicalText, source_hash: sourceHash, soup_category: soup, style_category: style }, { onConflict: "shop_id,source_hash,soup_category,style_category" });
