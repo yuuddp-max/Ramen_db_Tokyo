@@ -15,7 +15,6 @@ export const RAMEN_SOUPS: RamenGenreOption[] = [
   { label: "牛骨", keywords: ["牛骨"] },
   { label: "担々麺", keywords: ["担々", "担担", "坦々", "坦坦"] },
   { label: "カレー", keywords: ["カレー"] },
-  { label: "その他", keywords: [] },
 ];
 
 export const RAMEN_STYLES: RamenGenreOption[] = [
@@ -35,7 +34,7 @@ export const RAMEN_STYLES: RamenGenreOption[] = [
 ];
 
 function findGenre(name: string, options: RamenGenreOption[]) {
-  return options.find((option) => option.keywords.some((keyword) => name.includes(keyword)))?.label ?? "その他";
+  return options.find((option) => option.keywords.some((keyword) => name.includes(keyword)))?.label ?? "不明";
 }
 
 export function classifyRamen(name: string) {

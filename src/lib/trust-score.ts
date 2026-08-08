@@ -35,7 +35,7 @@ export function calculateRamenTrustScore(shop: TrustScoreShop, globalAverage = 4
   const classified = classifyRamen(shop.name);
   const nonSpecialty = /自販機|駐車場|物販|居酒屋|酒場|移動販売/.test(shop.name);
   const ramenKeywords = (shop.genres ?? []).some((genre) => /ramen|ラーメン|麺|つけ麺/i.test(genre));
-  const specialtyScore = nonSpecialty ? 0 : clamp(45 + (ramenKeywords ? 25 : 0) + (shop.researched_soup_type || shop.researched_style ? 20 : 0) + (classified.soup !== "その他" || classified.style !== "その他" ? 10 : 0));
+  const specialtyScore = nonSpecialty ? 0 : clamp(45 + (ramenKeywords ? 25 : 0) + (shop.researched_soup_type || shop.researched_style ? 20 : 0) + (classified.soup !== "不明" || classified.style !== "不明" ? 10 : 0));
   const updatedAt = shop.research_updated_at ?? shop.updated_at;
   const ageDays = updatedAt ? Math.max(0, (Date.now() - new Date(updatedAt).getTime()) / 86_400_000) : Number.POSITIVE_INFINITY;
   const recencyScore = ageDays <= 90 ? 100 : ageDays <= 180 ? 75 : ageDays <= 365 ? 50 : 25;
