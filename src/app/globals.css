@@ -37,6 +37,9 @@ select.bg-black option { background: #000; color: #fff; }
 input[placeholder*="店名"]:focus, input[placeholder*="店名"]:focus-visible { outline: none !important; box-shadow: none !important; }
 main > div.mb-4 > span:last-child:not(:empty) { color: var(--color-primary) !important; font-weight: 800 !important; }
 main .flex.rounded-lg.border.border-border.bg-white.p-1 { display: none; }
+/* Keep the soup filters close to the search form. */
+main > section:first-child { padding-bottom: 1.5rem !important; }
+main > section:first-child + div.mt-5 { margin-top: 0.25rem !important; }
 article[id^="shop-card-"] .grid > div:last-child { display: none; }
 div[class*="border-gold/30"][class*="bg-gold/5"] { display: none; }
 /* Keep the news/shop mode switch in the page header area. */
