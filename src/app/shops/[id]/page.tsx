@@ -54,8 +54,8 @@ export default async function ShopDetail({ params }: { params: Promise<{ id: str
   const openStatus = getCurrentOpenStatus(openingHours);
   const ramen = classifyRamen(shop.name);
   const isApprovedResearch = shop.research_status !== "draft" && shop.research_status !== "rejected";
-  const soupType = isApprovedResearch ? shop.researched_soup_type ?? ramen.soup : ramen.soup;
-  const ramenStyle = isApprovedResearch ? shop.researched_style ?? ramen.style : ramen.style;
+  const soupType = shop.soupCategory ?? (isApprovedResearch ? shop.researched_soup_type : null) ?? ramen.soup;
+  const ramenStyle = shop.styleCategory ?? (isApprovedResearch ? shop.researched_style : null) ?? ramen.style;
   const researchConfidence = isApprovedResearch && shop.research_confidence === "high" ? "高" : isApprovedResearch && shop.research_confidence === "medium" ? "中" : isApprovedResearch && shop.research_confidence === "low" ? "低" : null;
   const googleMapsUrl = shop.google_maps_uri ?? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(shop.name)}&query_place_id=${shop.place_id}`;
   const [station, awardResponse] = await Promise.all([

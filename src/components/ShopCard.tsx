@@ -9,7 +9,7 @@ export function ShopCard({ shop, selected = false }: { shop: RamenShop; distance
   const status = getCurrentOpenStatus(shop.opening_hours);
   const today = getTodayOpeningHours(shop.opening_hours);
   const ramen = classifyRamen(shop.name);
-  const tags = [shop.researched_soup_type ?? ramen.soup, shop.researched_style ?? ramen.style].filter(Boolean).slice(0, 2);
+  const tags = [shop.soupCategory ?? shop.researched_soup_type ?? ramen.soup, shop.styleCategory ?? shop.researched_style ?? ramen.style].filter(Boolean).slice(0, 2);
   const hours = today?.periods?.length ? today.periods.join(" / ") : "営業時間未確認";
   const trust = calculateRamenTrustScore(shop);
 
