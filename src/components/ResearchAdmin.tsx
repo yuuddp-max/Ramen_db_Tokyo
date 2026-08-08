@@ -61,14 +61,16 @@ type Draft = {
   research_evidence_summary: string | null;
 };
 type Metrics = {
+  recordCount: number;
+  deletedCount: number;
   total: number;
-  pending: number;
-  draft: number;
-  approved: number;
-  rejected: number;
-  missingRating: number;
-  missingWebsite: number;
-  missingPhoto: number;
+  soupRegistered: number;
+  soupRegistrationRate: number;
+  styleRegistered: number;
+  styleRegistrationRate: number;
+  ratingRegistered: number;
+  websiteRegistered: number;
+  photoRegistered: number;
 };
 type ClassificationMetrics = {
   total: number;
@@ -633,11 +635,23 @@ export function ResearchAdmin({
         </section>
       )}
       {active === "summary" && (
-        <section className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <Card label="登録店舗" value={metrics.total} tone="text-gold" />
-          <Card label="Google評価未登録" value={metrics.missingRating} />
-          <Card label="公式サイト未登録" value={metrics.missingWebsite} />
-          <Card label="写真未登録" value={metrics.missingPhoto} />
+        <section className="mt-8 space-y-3">
+          <div className="grid gap-3 sm:grid-cols-3">
+            <Card label="レコード数" value={metrics.recordCount} />
+            <Card label="削除数" value={metrics.deletedCount} />
+            <Card label="登録店舗" value={metrics.total} tone="text-gold" />
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <Card label="スープ系統登録数" value={metrics.soupRegistered} />
+            <Card label="スープ系統登録率" value={metrics.soupRegistrationRate} suffix="%" />
+            <Card label="カテゴリ登録数" value={metrics.styleRegistered} />
+            <Card label="カテゴリ登録率" value={metrics.styleRegistrationRate} suffix="%" />
+          </div>
+          <div className="grid gap-3 sm:grid-cols-3">
+            <Card label="Google評価登録数" value={metrics.ratingRegistered} />
+            <Card label="公式サイト登録数" value={metrics.websiteRegistered} />
+            <Card label="写真登録数" value={metrics.photoRegistered} />
+          </div>
         </section>
       )}
       {active === "classification-import" && (
