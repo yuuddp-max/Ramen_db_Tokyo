@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
 const SOUPS = ["醤油", "塩", "味噌", "豚骨", "豚骨醤油", "豚骨魚介", "鶏白湯", "煮干し", "魚介", "貝出汁", "担々麺", "その他", "不明"];
-const STYLES = ["中華そば", "家系", "二郎系", "二郎インスパイア", "つけ麺", "油そば・まぜそば", "博多系", "札幌系", "淡麗系", "濃厚系", "ちゃんぽん", "その他", "不明"];
+const STYLES = ["中華そば", "家系", "二郎系", "二郎インスパイア", "つけ麺", "油そば・まぜそば", "博多系", "札幌系", "淡麗系", "濃厚系", "背脂系", "ちゃんぽん", "その他", "不明"];
 const PAGE_SIZE = 10;
 type Shop = { place_id: string; name: string; address: string | null; rating: number | null; user_ratings_total: number | null; soupCategory: string | null; styleCategory: string | null; classificationStatus: string | null };
 
