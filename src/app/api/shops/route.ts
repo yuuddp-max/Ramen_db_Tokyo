@@ -31,7 +31,7 @@ export async function GET(request: NextRequest) {
   const hasBounds = [north, south, east, west].every(Number.isFinite) && north >= south && east >= west;
   const ids = rawIds?.split(",").filter((id) => /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id)).slice(0, 100) ?? [];
   const sortValue = params.get("sort");
-  const sort = sortValue === "newest" || sortValue === "reviews" || (sortValue === "distance" && hasLocation) ? sortValue : "rating";
+  const sort = sortValue === "newest" || sortValue === "rating" || sortValue === "reviews" || (sortValue === "distance" && hasLocation) ? sortValue : "reviews";
   const limit = Math.min(Math.max(Number(params.get("limit")) || 60, 1), 100);
   const offset = Math.max(Number(params.get("offset")) || 0, 0);
   if (rawIds !== null && !ids.length) return NextResponse.json({ shops: [], total: 0 });

@@ -15,7 +15,7 @@ export default async function Home() {
   const drivePosts = await loadDriveNewsCsv();
   if (supabase) {
     const [{ data }, { count }, { data: xPosts }] = await Promise.all([
-      supabase.from("ramen_shops").select("*").eq("is_excluded", false).order("rating", { ascending: false, nullsFirst: false }).limit(10),
+      supabase.from("ramen_shops").select("*").eq("is_excluded", false).order("user_ratings_total", { ascending: false, nullsFirst: false }).limit(10),
       supabase.from("ramen_shops").select("id", { count: "exact", head: true }).eq("is_excluded", false),
       supabase.from("web_ramen_mentions").select("*,ramen_shops(id,name)").eq("is_visible", true).order("published_at", { ascending: false, nullsFirst: false }).order("ranking_score", { ascending: false }).limit(40),
     ]);
