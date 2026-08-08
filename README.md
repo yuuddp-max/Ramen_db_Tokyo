@@ -99,7 +99,7 @@ Windows PowerShellでは `$RESEARCH_API_SECRET` を `$env:RESEARCH_API_SECRET` �
 
 ### 今週の東京ラーメン話題投稿（Web調査）
 
-Xの公開ポスト取得は使用せず、既存のOpenAI Responses APIの `web_search` を使って、直近7日間の東京ラーメン関連記事・店舗公式情報・ニュース・公開ブログを最大20件調査します。本文は長く転載せず、短い要約と出典URLだけを保存・表示します。
+既存のOpenAI Responses APIの `web_search` を使って、直近7日間の東京ラーメン関連記事・店舗公式情報・ニュース・公開ブログ・Xを含む公開Web情報を最大20件調査します。本文は長く転載せず、短い要約と出典URLだけを保存・表示します。検索呼び出しは1回の実行につき最大8回です。
 
 Supabase SQL Editorで [`supabase/20260728_web_ramen_mentions.sql`](./supabase/20260728_web_ramen_mentions.sql) を一度実行してください。このmigrationは次の3テーブルを作成します。
 
