@@ -102,6 +102,11 @@ type WebFetchLog = {
 
 const menus: { key: Menu; label: string; description: string }[] = [
   {
+    key: "summary",
+    label: "登録データ集計",
+    description: "店舗データの登録状況・充足率を確認できます。",
+  },
+  {
     key: "google",
     label: "新規データ取得",
     description: "Google Mapsで検索し、未登録店舗だけを追加します。",
@@ -125,11 +130,6 @@ const menus: { key: Menu; label: string; description: string }[] = [
     key: "webposts",
     label: "今週の話題投稿",
     description: "Web調査で直近の東京ラーメン情報を取得します。",
-  },
-  {
-    key: "summary",
-    label: "登録データ集計",
-    description: "店舗データの登録状況・充足率を確認できます。",
   },
 ];
 
