@@ -14,7 +14,7 @@ export default async function ResearchAdminPage() {
   let classificationMetrics: Parameters<typeof ResearchAdmin>[0]["classificationMetrics"] = { total: 0, processed: 0, autoApproved: 0, needsReview: 0, ai: 0, error: 0, progress: 0 };
   let webFetchLog: Parameters<typeof ResearchAdmin>[0]["webFetchLog"] = null;
   if (authenticated && supabaseAdmin) {
-    const [classificationReviewResult, recordCountResult, deletedCountResult, totalResult, soupRegisteredResult, styleRegisteredResult, websiteRegisteredResult, photoRegisteredResult, categoryRowsResult, trainingRowsResult, classificationProcessed, classificationAutoApproved, classificationNeedsReview, classificationAi, classificationError, xFetchLogResult] = await Promise.all([
+    const [classificationReviewResult, recordCountResult, deletedCountResult, totalResult, soupRegisteredResult, styleRegisteredResult, websiteRegisteredResult, photoRegisteredResult, categoryRowsResult, classificationProcessed, classificationAutoApproved, classificationNeedsReview, classificationAi, classificationError, xFetchLogResult] = await Promise.all([
       supabaseAdmin.from("ramen_shops").select('place_id,name,address,rating,user_ratings_total,research_evidence_summary,"soupCategory","styleCategory","soupConfidence","styleConfidence","classificationMethod","classificationStatus"').eq("is_excluded", false).eq("classificationStatus", "needs-review").order("classifiedAt", { ascending: false }).limit(30),
       supabaseAdmin.from("ramen_shops").select("id", { count: "exact", head: true }),
       supabaseAdmin.from("ramen_shops").select("id", { count: "exact", head: true }).eq("is_excluded", true),
@@ -24,7 +24,6 @@ export default async function ResearchAdminPage() {
       supabaseAdmin.from("ramen_shops").select("id", { count: "exact", head: true }).eq("is_excluded", false).not("website", "is", null),
       supabaseAdmin.from("ramen_shops").select("id", { count: "exact", head: true }).eq("is_excluded", false).not("photo_name", "is", null),
       supabaseAdmin.from("ramen_shops").select('id,place_id,name,"soupCategory","styleCategory"').eq("is_excluded", false).range(0, 9_999),
-      supabaseAdmin.from("classification_training_examples").select("shop_id,classification_text,soup_category,style_category,created_at").order("created_at", { ascending: false }).range(0, 19_999),
       supabaseAdmin.from("ramen_shops").select("id", { count: "exact", head: true }).eq("is_excluded", false).not("classificationStatus", "is", null),
       supabaseAdmin.from("ramen_shops").select("id", { count: "exact", head: true }).eq("is_excluded", false).eq("classificationStatus", "auto-approved"),
       supabaseAdmin.from("ramen_shops").select("id", { count: "exact", head: true }).eq("is_excluded", false).eq("classificationStatus", "needs-review"),
@@ -36,25 +35,11 @@ export default async function ResearchAdminPage() {
     drafts = data ?? [];
     webFetchLog = xFetchLogResult.data ?? null;
     const categoryRows = (categoryRowsResult.data ?? []) as Array<{ id: string; place_id: string; name: string | null; soupCategory: string | null; styleCategory: string | null }>;
-    const trainingRows = (trainingRowsResult.data ?? []) as Array<{ shop_id: string | null; classification_text: string | null; soup_category: string | null; style_category: string | null }>;
-    const latestTrainingByShop = new Map<string, { soup_category: string | null; style_category: string | null }>();
-    const latestTrainingByName = new Map<string, { soup_category: string | null; style_category: string | null }>();
-    const normalizeName = (value: string | null) => value?.normalize("NFKC").replace(/\s+/g, "").trim().toLocaleLowerCase("ja-JP") ?? "";
-    for (const row of trainingRows) {
-      if (row.shop_id && !latestTrainingByShop.has(row.shop_id)) latestTrainingByShop.set(row.shop_id, row);
-      const name = normalizeName(row.classification_text);
-      if (name && !latestTrainingByName.has(name)) latestTrainingByName.set(name, row);
-    }
     const countBy = (key: "soupCategory" | "styleCategory", categories: readonly string[]) => {
       const counts = new Map(categories.map((category) => [category, 0]));
       for (const row of categoryRows) {
-        const training = latestTrainingByShop.get(row.id) ?? latestTrainingByShop.get(row.place_id);
-        const nameTraining = latestTrainingByName.get(normalizeName(row.name));
-        const fallback = training ?? nameTraining;
         const current = row[key]?.trim();
-        const trained = (key === "soupCategory" ? fallback?.soup_category : fallback?.style_category)?.trim();
-        const category = current && current !== "不明" ? current : trained || current;
-        if (category && counts.has(category)) counts.set(category, (counts.get(category) ?? 0) + 1);
+        if (current && counts.has(current)) counts.set(current, (counts.get(current) ?? 0) + 1);
       }
       return categories.map((category) => {
         const count = counts.get(category) ?? 0;
