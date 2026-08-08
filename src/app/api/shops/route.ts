@@ -67,7 +67,7 @@ export async function GET(request: NextRequest) {
     const normalizedQuery = normalizeShopText(query);
     const textMatches = !normalizedQuery || normalizeShopText(shop.name).includes(normalizedQuery) || normalizeShopText(shop.address).includes(normalizedQuery) || normalizeShopText(shop.nearest_station).includes(normalizedQuery);
     const stationMatches = stationLocation ? calculateDistanceMeters(stationLocation.latitude, stationLocation.longitude, shop.latitude, shop.longitude) <= 2_000 : false;
-    return (!openNow || getCurrentOpenStatus(shop.opening_hours).open) && matchesRamenTaxonomy(shop.name, soup, style) && (stationSearch ? stationMatches || textMatches : textMatches);
+    return (!openNow || getCurrentOpenStatus(shop.opening_hours).open) && matchesRamenTaxonomy(shop.name, soup, style, shop.soupCategory) && (stationSearch ? stationMatches || textMatches : textMatches);
   });
   if (sort === "distance") matchingShops.sort((a, b) => calculateDistanceMeters(latitude, longitude, a.latitude, a.longitude) - calculateDistanceMeters(latitude, longitude, b.latitude, b.longitude));
   if (sort === "rating") matchingShops.sort((a, b) => calculateRamenTrustScore(b).score - calculateRamenTrustScore(a).score);

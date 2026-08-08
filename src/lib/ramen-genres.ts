@@ -44,7 +44,8 @@ export function classifyRamen(name: string) {
   return { soup: findGenre(name, soupOrder), style: findGenre(name, styleOrder) };
 }
 
-export function matchesRamenTaxonomy(name: string, soup: string, style: string) {
+export function matchesRamenTaxonomy(name: string, soup: string, style: string, soupCategory?: string | null) {
   const classification = classifyRamen(name);
-  return (!soup || classification.soup === soup) && (!style || classification.style === style);
+  const soupMatches = !soup || classification.soup === soup || soupCategory === soup;
+  return soupMatches && (!style || classification.style === style);
 }
