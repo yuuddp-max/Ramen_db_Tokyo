@@ -95,7 +95,7 @@ type WebFetchLog = {
 const menus: { key: Menu; label: string; description: string }[] = [
   {
     key: "google",
-    label: "データ取得",
+    label: "新規データ取得",
     description: "Google Mapsで検索し、未登録店舗だけを追加します。",
   },
   {
