@@ -4,7 +4,6 @@ import { ResearchAdmin } from "@/components/ResearchAdmin";
 import { isResearchAdminSession, RESEARCH_ADMIN_COOKIE } from "@/lib/research-admin-auth";
 import { supabaseAdmin } from "@/lib/supabase";
 import { SOUP_CATEGORIES, STYLE_CATEGORIES } from "@/lib/shop-classification";
-import { classifyRamen } from "@/lib/ramen-genres";
 
 export const dynamic = "force-dynamic";
 
@@ -63,15 +62,6 @@ export default async function ResearchAdminPage() {
       });
     };
     const soupBreakdown = countBy("soupCategory", SOUP_CATEGORIES);
-    const taxonomySoupCounts = new Map<string, number>(SOUP_CATEGORIES.map((category) => [category, 0]));
-    for (const row of categoryRows) {
-      const category = classifyRamen(row.name ?? "").soup;
-      taxonomySoupCounts.set(category, (taxonomySoupCounts.get(category) ?? 0) + 1);
-    }
-    const taxonomySoupBreakdown = SOUP_CATEGORIES.map((category) => {
-      const count = taxonomySoupCounts.get(category) ?? 0;
-      return { category, count, rate: totalResult.count ? Math.round((count / totalResult.count) * 1000) / 10 : 0 };
-    });
     const styleBreakdown = countBy("styleCategory", STYLE_CATEGORIES);
     const soupRegistered = soupRegisteredResult.count ?? 0;
     const styleRegistered = styleRegisteredResult.count ?? 0;
@@ -87,7 +77,7 @@ export default async function ResearchAdminPage() {
       websiteRegistrationRate: totalResult.count ? Math.round(((websiteRegisteredResult.count ?? 0) / totalResult.count) * 1000) / 10 : 0,
       photoRegistered: photoRegisteredResult.count ?? 0,
       photoRegistrationRate: totalResult.count ? Math.round(((photoRegisteredResult.count ?? 0) / totalResult.count) * 1000) / 10 : 0,
-      soupBreakdown: taxonomySoupBreakdown,
+      soupBreakdown,
       styleBreakdown,
     };
     const total = totalResult.count ?? 0;
