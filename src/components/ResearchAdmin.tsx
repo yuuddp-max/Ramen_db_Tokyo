@@ -70,9 +70,10 @@ type Metrics = {
   soupRegistrationRate: number;
   styleRegistered: number;
   styleRegistrationRate: number;
-  ratingRegistered: number;
   websiteRegistered: number;
+  websiteRegistrationRate: number;
   photoRegistered: number;
+  photoRegistrationRate: number;
 };
 type ClassificationMetrics = {
   total: number;
@@ -638,7 +639,7 @@ export function ResearchAdmin({
       )}
       {active === "summary" && (
         <section className="mt-8 space-y-3">
-          <div className="grid gap-3 sm:grid-cols-3">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <Card label="レコード数" value={metrics.recordCount} />
             <Card label="削除数" value={metrics.deletedCount} />
             <Card label="登録店舗" value={metrics.total} tone="text-gold" />
@@ -650,9 +651,10 @@ export function ResearchAdmin({
             <Card label="カテゴリ登録率" value={metrics.styleRegistrationRate} suffix="%" />
           </div>
           <div className="grid gap-3 sm:grid-cols-3">
-            <Card label="Google評価登録数" value={metrics.ratingRegistered} />
             <Card label="公式サイト登録数" value={metrics.websiteRegistered} />
+            <Card label="公式サイト登録率" value={metrics.websiteRegistrationRate} suffix="%" />
             <Card label="写真登録数" value={metrics.photoRegistered} />
+            <Card label="写真登録率" value={metrics.photoRegistrationRate} suffix="%" />
           </div>
         </section>
       )}
