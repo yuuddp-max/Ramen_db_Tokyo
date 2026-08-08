@@ -11,6 +11,8 @@ export async function GET(request: NextRequest) {
   if (!supabaseAdmin) return NextResponse.json({ error: "Supabase service role is not configured." }, { status: 500 });
   const params = request.nextUrl.searchParams;
   const query = params.get("q")?.trim() ?? "";
+  const soupCategory = params.get("soupCategory")?.trim() ?? "";
+  const styleCategory = params.get("styleCategory")?.trim() ?? "";
   const limit = Math.min(Math.max(Number(params.get("limit")) || 100, 1), 200);
   const offset = Math.max(Number(params.get("offset")) || 0, 0);
   const nonRamenOnly = params.get("nonRamen") === "1";
@@ -21,6 +23,8 @@ export async function GET(request: NextRequest) {
     .order("name", { ascending: true });
   if (!includeExcluded) builder = builder.eq("is_excluded", false);
   if (soupUnregistered) builder = builder.is("soupCategory", null);
+  if (soupCategory) builder = builder.eq("soupCategory", soupCategory);
+  if (styleCategory) builder = builder.eq("styleCategory", styleCategory);
   if (nonRamenOnly) builder = builder.limit(20_000);
   else builder = builder.range(offset, offset + limit - 1);
   if (query) builder = builder.ilike("name", `%${query.replace(/[%_]/g, "")}%`);

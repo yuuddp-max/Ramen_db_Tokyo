@@ -10,6 +10,8 @@ export function ShopNameMaintenance() {
   const [shops, setShops] = useState<Shop[]>([]);
   const [total, setTotal] = useState(0);
   const [query, setQuery] = useState("");
+  const [soupFilter, setSoupFilter] = useState("");
+  const [styleFilter, setStyleFilter] = useState("");
   const [nonRamenOnly, setNonRamenOnly] = useState(false);
   const [soupUnregistered, setSoupUnregistered] = useState(false);
   const [includeExcluded, setIncludeExcluded] = useState(false);
@@ -24,7 +26,7 @@ export function ShopNameMaintenance() {
   const load = useCallback(async () => {
     setLoading(true); setMessage("");
     try {
-      const response = await fetch(`/api/research/admin/shop-name-maintenance?q=${encodeURIComponent(query)}&nonRamen=${nonRamenOnly ? "1" : "0"}&soupUnregistered=${soupUnregistered ? "1" : "0"}&includeExcluded=${includeExcluded ? "1" : "0"}&limit=${PAGE_SIZE}&offset=${page * PAGE_SIZE}`, { cache: "no-store" });
+      const response = await fetch(`/api/research/admin/shop-name-maintenance?q=${encodeURIComponent(query)}&soupCategory=${encodeURIComponent(soupFilter)}&styleCategory=${encodeURIComponent(styleFilter)}&nonRamen=${nonRamenOnly ? "1" : "0"}&soupUnregistered=${soupUnregistered ? "1" : "0"}&includeExcluded=${includeExcluded ? "1" : "0"}&limit=${PAGE_SIZE}&offset=${page * PAGE_SIZE}`, { cache: "no-store" });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error ?? "店舗データの取得に失敗しました。");
       setShops(data.shops ?? []); setTotal(data.total ?? 0); setSelected(new Set());
@@ -33,7 +35,7 @@ export function ShopNameMaintenance() {
       setStyleCategories((current) => Object.fromEntries((data.shops ?? []).map((shop: Shop) => [shop.place_id, current[shop.place_id] ?? shop.styleCategory ?? ""])));
     } catch (error) { setMessage(error instanceof Error ? error.message : "店舗データの取得に失敗しました。"); }
     finally { setLoading(false); }
-  }, [page, query, nonRamenOnly, soupUnregistered, includeExcluded]);
+  }, [page, query, soupFilter, styleFilter, nonRamenOnly, soupUnregistered, includeExcluded]);
   useEffect(() => { void load(); }, [load]);
   const search = () => { setPage(0); if (page === 0) void load(); };
   const save = async (shop: Shop) => {
@@ -88,7 +90,7 @@ export function ShopNameMaintenance() {
   return <section className="panel mt-8 rounded-2xl p-6">
     <h2 className="text-2xl font-black">データメンテナンス</h2>
     <p className="mt-3 text-sm text-stone-400">登録済み店舗の店名・スープ系統・スタイル・削除状態を管理します。削除すると ramen_shops.is_excluded=true の削除フラグが付き、一覧・検索対象から除外されます。</p>
-    <div className="mt-5 flex flex-wrap gap-2"><input value={query} onChange={(event) => setQuery(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") search(); }} placeholder="店名で検索" className="min-w-64 flex-1 rounded-xl border border-white/10 bg-black/30 px-4 py-3" /><button disabled={loading} onClick={search} className="rounded-xl bg-gold px-4 py-3 font-bold text-ink">検索</button><button disabled={loading} onClick={() => { setPage(0); setNonRamenOnly((current) => !current); }} className={`rounded-xl border px-4 py-3 font-bold ${nonRamenOnly ? "border-red-400 bg-red-400/10 text-red-300" : "border-white/20 text-stone-200"}`}>{nonRamenOnly ? "全店舗を表示" : "非ラーメン候補を表示"}</button><button disabled={loading} onClick={() => { setPage(0); setSoupUnregistered((current) => !current); }} className={`rounded-xl border px-4 py-3 font-bold ${soupUnregistered ? "border-gold bg-gold/10 text-gold" : "border-white/20 text-stone-200"}`}>{soupUnregistered ? "全店舗を表示" : "スープ未登録を表示"}</button><button disabled={loading} onClick={() => { setPage(0); setIncludeExcluded((current) => !current); }} className={`rounded-xl border px-4 py-3 font-bold ${includeExcluded ? "border-gold bg-gold/10 text-gold" : "border-white/20 text-stone-200"}`}>{includeExcluded ? "通常店舗を表示" : "削除済みを表示"}</button></div>
+    <div className="mt-5 flex flex-wrap items-end gap-2"><input value={query} onChange={(event) => setQuery(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") search(); }} placeholder="店名で検索" className="min-w-64 flex-1 rounded-xl border border-white/10 bg-black/30 px-4 py-3" /><label className="text-sm font-bold text-stone-300">スープ系統<select value={soupFilter} onChange={(event) => { setSoupFilter(event.target.value); setPage(0); }} className="mt-1 block rounded-xl border border-white/10 bg-black/30 px-3 py-3 font-normal text-white"><option value="">すべて</option>{SOUP_CATEGORIES.map((category) => <option key={category} value={category}>{category}</option>)}</select></label><label className="text-sm font-bold text-stone-300">スタイル<select value={styleFilter} onChange={(event) => { setStyleFilter(event.target.value); setPage(0); }} className="mt-1 block rounded-xl border border-white/10 bg-black/30 px-3 py-3 font-normal text-white"><option value="">すべて</option>{STYLE_CATEGORIES.map((category) => <option key={category} value={category}>{category}</option>)}</select></label><button disabled={loading} onClick={search} className="rounded-xl bg-gold px-4 py-3 font-bold text-ink">検索</button><button disabled={loading} onClick={() => { setPage(0); setNonRamenOnly((current) => !current); }} className={`rounded-xl border px-4 py-3 font-bold ${nonRamenOnly ? "border-red-400 bg-red-400/10 text-red-300" : "border-white/20 text-stone-200"}`}>{nonRamenOnly ? "全店舗を表示" : "非ラーメン候補を表示"}</button><button disabled={loading} onClick={() => { setPage(0); setSoupUnregistered((current) => !current); }} className={`rounded-xl border px-4 py-3 font-bold ${soupUnregistered ? "border-gold bg-gold/10 text-gold" : "border-white/20 text-stone-200"}`}>{soupUnregistered ? "全店舗を表示" : "スープ未登録を表示"}</button><button disabled={loading} onClick={() => { setPage(0); setIncludeExcluded((current) => !current); }} className={`rounded-xl border px-4 py-3 font-bold ${includeExcluded ? "border-gold bg-gold/10 text-gold" : "border-white/20 text-stone-200"}`}>{includeExcluded ? "通常店舗を表示" : "削除済みを表示"}</button></div>
     {nonRamenOnly && <p className="mt-3 text-sm text-red-300">店名・住所・Googleジャンルから非ラーメン候補を抽出しています。内容を確認してから一括削除してください。</p>}
     {pageCount > 1 && <div className="mt-4 flex items-center justify-center gap-3"><button disabled={page === 0 || loading} onClick={() => setPage((current) => Math.max(0, current - 1))} className="rounded-lg border border-white/15 px-4 py-2 text-sm font-bold text-stone-200 disabled:cursor-not-allowed disabled:opacity-40">前へ</button><span className="text-sm text-stone-400">{page + 1} / {pageCount}ページ</span><button disabled={page >= pageCount - 1 || loading} onClick={() => setPage((current) => Math.min(pageCount - 1, current + 1))} className="rounded-lg border border-white/15 px-4 py-2 text-sm font-bold text-stone-200 disabled:cursor-not-allowed disabled:opacity-40">次へ</button></div>}
     {message && <p className="mt-4 rounded-xl border border-gold/40 bg-gold/10 px-4 py-3 text-sm text-gold">{message}</p>}
