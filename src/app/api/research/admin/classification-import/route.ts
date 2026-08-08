@@ -163,7 +163,13 @@ export async function POST(request: NextRequest) {
     const sourceHash = classificationSourceHash(canonicalText);
     if (suppliedSourceHash && suppliedSourceHash !== sourceHash) { skipped.push(`行${index + 2}: source_hashがclassification_textと一致しません`); continue; }
     // 分類欄は空白を許可する。値が入力されている場合だけ選択肢を検証する。
-    if ((soup && !SOUP_CATEGORIES.includes(soup as (typeof SOUP_CATEGORIES)[number])) || (style && !STYLE_CATEGORIES.includes(style as (typeof STYLE_CATEGORIES)[number]))) { skipped.push(`行${index + 2}: 分類値が不正`); continue; }
+    const invalidSoup = soup && !SOUP_CATEGORIES.includes(soup as (typeof SOUP_CATEGORIES)[number]);
+    const invalidStyle = style && !STYLE_CATEGORIES.includes(style as (typeof STYLE_CATEGORIES)[number]);
+    if (invalidSoup || invalidStyle) {
+      const invalidValues = [invalidSoup ? `soup_category="${soup}"` : "", invalidStyle ? `style_category="${style}"` : ""].filter(Boolean).join(", ");
+      skipped.push(`行${index + 2}: 分類値が不正 (${invalidValues})`);
+      continue;
+    }
     const now = new Date().toISOString();
     const { error } = await supabaseAdmin.from("ramen_shops").update({
       soupCategory: soup, styleCategory: style, soupConfidence: 1, styleConfidence: 1,
