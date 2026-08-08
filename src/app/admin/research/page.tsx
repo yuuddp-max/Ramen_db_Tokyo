@@ -23,7 +23,7 @@ export default async function ResearchAdminPage() {
       supabaseAdmin.from("ramen_shops").select("id", { count: "exact", head: true }).eq("is_excluded", false).not("styleCategory", "is", null),
       supabaseAdmin.from("ramen_shops").select("id", { count: "exact", head: true }).eq("is_excluded", false).not("website", "is", null),
       supabaseAdmin.from("ramen_shops").select("id", { count: "exact", head: true }).eq("is_excluded", false).not("photo_name", "is", null),
-      supabaseAdmin.from("ramen_shops").select('"soupCategory","styleCategory",researched_soup_type,researched_style').eq("is_excluded", false).range(0, 9_999),
+      supabaseAdmin.from("ramen_shops").select('"soupCategory","styleCategory"').eq("is_excluded", false).range(0, 9_999),
       supabaseAdmin.from("ramen_shops").select("id", { count: "exact", head: true }).eq("is_excluded", false).not("classificationStatus", "is", null),
       supabaseAdmin.from("ramen_shops").select("id", { count: "exact", head: true }).eq("is_excluded", false).eq("classificationStatus", "auto-approved"),
       supabaseAdmin.from("ramen_shops").select("id", { count: "exact", head: true }).eq("is_excluded", false).eq("classificationStatus", "needs-review"),
@@ -34,11 +34,11 @@ export default async function ResearchAdminPage() {
     const { data } = classificationReviewResult;
     drafts = data ?? [];
     webFetchLog = xFetchLogResult.data ?? null;
-    const categoryRows = (categoryRowsResult.data ?? []) as Array<{ soupCategory: string | null; styleCategory: string | null; researched_soup_type: string | null; researched_style: string | null }>;
+    const categoryRows = (categoryRowsResult.data ?? []) as Array<{ soupCategory: string | null; styleCategory: string | null }>;
     const countBy = (key: "soupCategory" | "styleCategory", categories: readonly string[]) => {
       const counts = new Map(categories.map((category) => [category, 0]));
       for (const row of categoryRows) {
-        const category = (key === "soupCategory" ? row.soupCategory ?? row.researched_soup_type : row.styleCategory ?? row.researched_style)?.trim();
+        const category = row[key]?.trim();
         if (category && counts.has(category)) counts.set(category, (counts.get(category) ?? 0) + 1);
       }
       return categories.map((category) => {
